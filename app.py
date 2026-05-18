@@ -189,29 +189,6 @@ with st.sidebar:
 if len(estados) > 0:
     df = df[df["NOM_EDO_PROD"].isin(estados)]
 
-# Filtro por fecha de captura
-inicio = df["fecha_captura"].min().date() if pd.notna(df["fecha_captura"].min()) else datetime.date(2025, 12, 3)
-fin = df["fecha_captura"].max().date() if pd.notna(df["fecha_captura"].max()) else datetime.date.today()
-
-with st.sidebar:
-    # 2. Generamos una clave única basada en los datos filtrados
-    # Esto fuerza el refresco cada vez que inicio o fin cambian
-    clave_dinamica = f"fecha_{inicio}_{fin}_{opcion}_{len(estados)}"
-    
-    fecha = st.date_input(
-        "Filtrar información por fecha", 
-        value=(inicio, fin),
-        format="DD/MM/YYYY",
-        key=clave_dinamica  # <--- Esta es la clave
-    )
-
-if len(fecha)==2:
-    df = df[
-        ((df["fecha_captura"] >= pd.to_datetime(fecha[0])) &
-        (df["fecha_captura"] <= pd.to_datetime(fecha[1]))) | 
-        (df["fecha_captura"].isna())
-    ]
-
 st.markdown(f"""
     <style>
     [data-testid="stMetric"] {{
@@ -246,22 +223,56 @@ col1, col2, col3,  = st.columns(3)
 # col2.metric("Personas actualizadas", f"{df[df['ACTUALIZADO'] == 'Si']['Personas'].sum():,.0f}", f"{df[df['ACTUALIZADO'] == 'Si']['Personas'].sum()/df['Personas'].sum()*100:,.1f}%")
 # col3.metric("Personas pendientes de actualizar", f"{df[df['ACTUALIZADO'] == 'No']['Personas'].sum():,.0f}", f"{df[df['ACTUALIZADO'] == 'No']['Personas'].sum()/df['Personas'].sum()*100:,.1f}%",delta_color="inverse")
 
+meta = df['Personas'].sum()
 with col1:
-    st.metric("Meta de actualización", f"{df['Personas'].sum():,.0f}", "100%")
+    st.metric("Meta de actualización", f"{meta:,.0f}", "100%")
 
+# Filtro por fecha de captura
+inicio = df["fecha_captura"].min().date() if pd.notna(df["fecha_captura"].min()) else datetime.date(2025, 12, 3)
+fin = df["fecha_captura"].max().date() if pd.notna(df["fecha_captura"].max()) else datetime.date.today()
+
+with st.sidebar:
+    # 2. Generamos una clave única basada en los datos filtrados
+    # Esto fuerza el refresco cada vez que inicio o fin cambian
+    clave_dinamica_ini = f"fecha_ini_{inicio}_{opcion}_{len(estados)}"
+    clave_dinamica_fin = f"fecha_fin_{fin}_{opcion}_{len(estados)}"
+    
+    fecha_ini = st.date_input(
+        "Fecha de inicio", 
+        value=inicio,
+        format="DD/MM/YYYY",
+        key=clave_dinamica_ini  # <--- Esta es la clave
+    )
+    fecha_fin = st.date_input(
+        "Fecha de fin", 
+        value=fin,
+        format="DD/MM/YYYY",
+        key=clave_dinamica_fin  # <--- Esta es la clave
+    )
+
+if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin != "":
+    df = df[
+        ((df["fecha_captura"] >= pd.to_datetime(fecha_ini)) &
+        (df["fecha_captura"] <= pd.to_datetime(fecha_fin))) | 
+        (df["fecha_captura"].isna())
+    ]
+
+actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum()
 with col2:
     st.metric("Personas actualizadas", 
-              f"{df[df['ACTUALIZADO'] == 'Si']['Personas'].sum():,.0f}", 
-              f"{df[df['ACTUALIZADO'] == 'Si']['Personas'].sum()/df['Personas'].sum()*100:,.1f}%")
+              f"{actualizados:,.0f}", 
+              f"{actualizados/meta*100:,.1f}%")
 
 with col3:
-    pendientes = df[df['ACTUALIZADO'] == 'No']['Personas'].sum()
-    porcentaje_pend = pendientes / df['Personas'].sum() * 100
+    pendientes = meta - actualizados
+    porcentaje_pend = pendientes / meta * 100
     # delta_color="inverse" hace que positivo sea rojo y negativo verde
     st.metric("Pendientes de actualizar", 
               f"{pendientes:,.0f}", 
               f"{porcentaje_pend:,.1f}%",
               delta_color="inverse")    # <-- Valor positivo se muestra en ROJO
+
+
 
 # Información de fechas para el gráfico
 col1, col2 = st.columns(2)
@@ -281,13 +292,13 @@ with col1:
 
     # Renombrar estatus
     df_estado["Estatus"] = df_estado["ACTUALIZADO"].map({
-        "Si": "Actualizado",
-        "No": "Pendiente",
+        "Si": "actualizadas",
+        "No": "pendientes",
     })
 
     # --- Ordenar: incluir TODOS los estados ---
     todos_estados = df_total["NOM_EDO_PROD"].unique()
-    df_actualizado = df_estado[df_estado["Estatus"] == "Actualizado"].copy()
+    df_actualizado = df_estado[df_estado["Estatus"] == "actualizadas"].copy()
 
     df_orden = pd.DataFrame({"NOM_EDO_PROD": todos_estados})
     df_orden = df_orden.merge(
@@ -301,7 +312,7 @@ with col1:
     # Colores
     VERDE = "#285C4D"
     DORADO = "#D4C19C"
-    color_map = {"Actualizado": VERDE, "Pendiente": DORADO}
+    color_map = {"actualizadas": VERDE, "pendientes": DORADO}
 
     # ✅ CLAVE: Agregar "Estatus" a custom_data para usarlo en el hover
     fig_estado = px.bar(
@@ -314,7 +325,7 @@ with col1:
         color_discrete_map=color_map,
         category_orders={
             "NOM_EDO_PROD": orden_estados,
-            "Estatus": ["Actualizado", "Pendiente"]
+            "Estatus": ["actualizadas", "pendientes"]
         },
         barmode="stack",
         orientation="h"
@@ -327,7 +338,7 @@ with col1:
         textfont=dict(size=16, color="white"),
         hovertemplate=(
             "%{customdata[0]}: "
-            "%{customdata[1]:,.0f} (%{customdata[2]:.1f}%) %{customdata[3]}"
+            "%{customdata[1]:,.0f} (%{customdata[2]:.1f}%) personas %{customdata[3]}"
             "<extra></extra>"
         )
     )
@@ -339,10 +350,10 @@ with col1:
             font=dict(size=16, color=GUINDA)
         ),
         hoverlabel=dict(
-            font_size=16,
-            font_family="Noto Sans",
-            bgcolor="rgba(40, 92, 77, 0.95)",
-            font_color="white",
+            font_size=14,
+            font_family="Noto Sans Black",
+            bgcolor="white",
+            font_color=VERDE,
             bordercolor="#D4C19C"
         ),
         xaxis=dict(
@@ -417,7 +428,6 @@ with col2:
     df["mes"] = pd.Categorical(mes_fin).codes + 1
     df["mes"] = df["mes"].where(df["fecha_captura"].notna()).map(lambda x: f"Mes {int(x):02d}")
 
-
     # --- Agrupar según selección ---
     if periodo == "Semanal":
         df_agrupado = df.groupby(df["semana"])["Personas"].sum().reset_index()
@@ -432,13 +442,18 @@ with col2:
 
     df_filtrado = df_agrupado
 
+    # ✅ Calcular el total para mostrar porcentaje en hover
+    total_personas = df_filtrado["Cantidad"].sum()
+    df_filtrado["Porcentaje"] = (df_filtrado["Cantidad"] / total_personas * 100).round(1)
+
     # --- Gráfico de barras con valores ---
     fig = px.bar(
         df_filtrado,
         x="Fecha",
         y="Cantidad",
-        text="Cantidad",  # <-- Agrega los valores como texto en las barras
+        text="Cantidad",
         labels={"Fecha": periodo, "Cantidad": "Personas"},
+        custom_data=["Fecha", "Cantidad", "Porcentaje"],  # 👈 Agregar custom_data
         color_discrete_sequence=["#D4C19C"]
     )
 
@@ -450,32 +465,51 @@ with col2:
             color="#285C4D",
             family="Noto Sans Black",
         ),
+        # ✅ HOVER CORREGIDO
         hovertemplate=(
-                "text: "
-                "%{value:,.0f} "          # <-- Usar %{value} en lugar de customdata
-                "(%{percent}) "
-                "<extra></extra>"
-            ),
-        cliponaxis=False  # <-- Permite que el texto se dibuje fuera del área del eje
-        )
+            "%{customdata[0]}: "
+            "%{customdata[1]:,.0f} "
+            "(%{customdata[2]:.1f}%) personas actualizadas"
+            "<extra></extra>"
+        ),
+        cliponaxis=False
+    )
 
     fig.update_layout(
         xaxis_tickangle=-45,
         bargap=0.1,
-        height=480,  # <-- Un poco más de altura
+        height=480,
         template="plotly_white",
         uniformtext_minsize=8,
         uniformtext_mode='hide',
-        margin=dict(t=80),  # <-- Más margen superior
+        margin=dict(t=80),
         title=dict(
             text=f"Avance {periodo}",
-            font=dict(size=16, color=GUINDA)    # <-- Título más grande
+            font=dict(size=16, color=GUINDA)
         ),
+        # ✅ Estilo del hover
+        hoverlabel=dict(
+            font_size=14,
+            font_family="Noto Sans Black",
+            bgcolor="white",
+            font_color=VERDE,
+            bordercolor="#D4C19C"
+        ),  
         yaxis=dict(
-            range=[0, df_filtrado["Cantidad"].max() * 1.1]  # <-- 20% extra
+            range=[0, df_filtrado["Cantidad"].max() * 1.2]
         )
     )
     st.plotly_chart(fig, width='stretch')
+
+
+# =============================================================================
+# FILA 3: ANÁLISIS DE CAMBIOS (Superficie, Cultivo, Género, Edad)
+# =============================================================================
+
+st.markdown(
+    '### Análisis de Cambios Detectados',
+    unsafe_allow_html=True
+)
 
 
 # Crear columnas para mostrar las donas lado a lado
@@ -524,19 +558,19 @@ for i, (variable, titulo) in enumerate(variables_dona.items()):
         textinfo='label+percent',
         textfont=dict(size=14, color="white",family="Noto Sans Black"),
         hovertemplate=(
-            "Personas: "
+            "%{label}: "
             "%{value:,.0f} "          # <-- Usar %{value} en lugar de customdata
-            "(%{percent})"
+            "(%{percent}) personas"
             "<extra></extra>"
         )
     )
     
     fig_dona.update_layout(
         hoverlabel=dict(
-            font_size=16,
-            font_family="Arial",
-            bgcolor="rgba(40, 92, 77, 0.95)",
-            font_color="white",
+            font_size=14,
+            font_family="Noto Sans Black",
+            bgcolor="white",
+            font_color=VERDE,
             bordercolor="#D4C19C"
         ),
         title=dict(
@@ -564,14 +598,6 @@ for i, (variable, titulo) in enumerate(variables_dona.items()):
 
 
 
-# =============================================================================
-# FILA 4: ANÁLISIS DE CAMBIOS (Superficie, Cultivo, Género, Edad)
-# =============================================================================
-
-st.markdown(
-    'Análisis de Cambios Detectados',
-    unsafe_allow_html=True
-)
 
 
 # =============================================================================
