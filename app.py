@@ -1110,8 +1110,6 @@ with tab_detalle:
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOTÓN DE DESCARGA EN EL SIDEBAR
 # ═══════════════════════════════════════════════════════════════════════════════
-# Agregar esto dentro del sidebar, después de los filtros de fecha:
-from generar_archivo_pdf import generar_presentacion_pdf
 
 st.markdown(f"""
     Generar presentación en PDF
@@ -1145,6 +1143,7 @@ st.markdown(f"""
 if st.button("Descargar informe", type="primary"):
     st.toast("Procesando presentación", icon="⚙️")
 
+# from generar_archivo_pdf import generar_presentacion_pdf
 # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
 # st.download_button(
 #     label="Generar y Descargar PDF",
