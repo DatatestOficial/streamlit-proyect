@@ -1156,20 +1156,6 @@ with tab_detalle:
 
     tab_cultivo, tab_entidad, tab_cader = st.tabs(["Resumen por cultivo","Resumen por entidad federativa", "Resumen por cader"])
 
-    with tab_cultivo:
-        if "NOM_CULTIVO" in df.columns:
-            df_cultivo = df.groupby("NOM_CULTIVO")["Personas"].sum().reset_index()
-            df_cultivo = df_cultivo.sort_values("Personas", ascending=False).head(20)
-            df_cultivo["Porcentaje"] = (df_cultivo["Personas"] / df_cultivo["Personas"].sum() * 100).round(1)
-
-            fig_cultivo = px.bar(df_cultivo.sort_values("Personas", ascending=True), y="NOM_CULTIVO", x="Personas", text=df_cultivo.sort_values("Personas", ascending=True).apply(lambda r: f"{r['Personas']:,.0f}", axis=1), color_discrete_sequence=["#235B4E"], orientation="h")
-            fig_cultivo.update_traces(textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{y}:</b><br> Personas : %{x:,.0f} <extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1)
-            fig_cultivo.update_layout(title=dict(text="Top 20 Cultivos", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), yaxis=dict(title=dict(text="Cultivo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=12, color="black", family=FONT_FAMILY)), xaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY)), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), height=600, template="plotly_white", margin=dict(t=60, b=40, l=180, r=80), paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig_cultivo, width='stretch')
-            st.dataframe(df_cultivo[["NOM_CULTIVO", "Personas", "Porcentaje"]].rename(columns={"NOM_CULTIVO": "Cultivo", "Porcentaje": "% del total"}), width='stretch', hide_index=True)
-        else:
-            st.info("Columna 'NOM_CULTIVO' no disponible.")
-
     with tab_entidad:
         if "NOM_EDO_PROD" in df.columns:
             df_pivot = df.groupby(["NOM_EDO_PROD", "genero", "regimen_predominante"])["Personas"].sum().reset_index()
@@ -1197,14 +1183,7 @@ with tab_detalle:
         else:
             st.info("Columna 'NOM_EDO_PROD' no disponible.")
 
-    with tab_cader:
-        if "NOM_CADER" in df.columns:
-            df_cader = df.groupby(["NOM_EDO_PROD", "NOM_CADER"])["Personas"].sum().reset_index()
-            df_cader = df_cader.sort_values("Personas", ascending=False).head(30)
-            st.dataframe(df_cader.rename(columns={"NOM_EDO_PROD": "Estado", "NOM_CADER": "CADER", "Personas": "Total Personas"}), width='stretch', hide_index=True)
-        else:
-            st.info("Columna 'NOM_CADER' no disponible.")
-
+ 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOTÓN DE DESCARGA EN EL SIDEBAR
