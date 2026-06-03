@@ -1260,5 +1260,5 @@ with st.expander("Información Legal y de Privacidad"):
     **Aviso de Uso Interno e Informativo**  
     Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.
 
-    Este software es de código abierto distribuido bajo la Licencia MIT. - Área de Estadística y Actualización.
+    Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.
     """)
