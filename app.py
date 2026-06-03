@@ -745,15 +745,17 @@ with st.sidebar:
 
     opcion = st.selectbox("Seleccionar proceso", ["Nacional", "Prueba piloto (8 estados)", "Caña","Reposición de tarjetas"])
 
-
 filtros = {
     "Nacional": None,
     "Caña": df["CONADESUCA"] == "Si",
-    "Prueba piloto (8 estados)": df["NOM_EDO_PROD"].isin([
-        "CIUDAD DE MEXICO", "DURANGO", "MORELOS", "NAYARIT",
-        "PUEBLA", "QUERETARO DE ARTEAGA", "TLAXCALA", "ZACATECAS"
-    ])
+    "Prueba piloto (8 estados)": df["OCHO_ENT"]== "Si",
+    "Reposición de tarjetas": df["reposición_tarjeta"] == "Si",
+    # "Prueba piloto (8 estados)": df["OCHO_ENT"].isin([
+    #     "CIUDAD DE MEXICO", "DURANGO", "MORELOS", "NAYARIT",
+    #     "PUEBLA", "QUERETARO DE ARTEAGA", "TLAXCALA", "ZACATECAS"
+    # ])
 }
+
 
 condicion = filtros.get(opcion)
 if condicion is not None:
@@ -779,11 +781,13 @@ meta = df['Personas'].sum() if len(df) > 0 else 0
 
 # Filtro por fecha
 if len(df) > 0:
-    inicio = df["fecha_captura"].min().date() if pd.notna(df["fecha_captura"].min()) else datetime.date(2025, 12, 3)
-    fin = df["fecha_captura"].max().date() if pd.notna(df["fecha_captura"].max()) else datetime.date.today()
+    inicio = df["dia"].min().date() if pd.notna(df["dia"].min()) else datetime.date(2025, 12, 3)
+    fin = df["dia"].max().date() if pd.notna(df["dia"].max()) else datetime.date.today()
 else:
     inicio = datetime.date(2025, 12, 3)
     fin = datetime.date.today()
+
+
 
 with st.sidebar:
     clave_dinamica_ini = f"fecha_ini_{inicio}_{opcion}_{len(estados)}"
@@ -805,15 +809,15 @@ with st.sidebar:
 if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin != "":
     if len(df) > 0:
         df = df[
-            ((df["fecha_captura"] >= pd.to_datetime(fecha_ini)) &
-             (df["fecha_captura"] <= pd.to_datetime(fecha_fin))) |
-            (df["fecha_captura"].isna())
+            ((df["dia"] >= pd.to_datetime(fecha_ini)) &
+             (df["dia"] <= pd.to_datetime(fecha_fin))) |
+            (df["dia"].isna())
         ]
     if len(df_para_mapa) > 0:
         df_para_mapa = df_para_mapa[
-            ((df_para_mapa["fecha_captura"] >= pd.to_datetime(fecha_ini)) &
-             (df_para_mapa["fecha_captura"] <= pd.to_datetime(fecha_fin))) |
-            (df_para_mapa["fecha_captura"].isna())
+            ((df_para_mapa["dia"] >= pd.to_datetime(fecha_ini)) &
+             (df_para_mapa["dia"] <= pd.to_datetime(fecha_fin))) |
+            (df_para_mapa["dia"].isna())
         ]
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -937,8 +941,8 @@ with tab_avance:
     with tab_temporal:
         periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
 
-        df["fecha_captura"] = pd.to_datetime(df["fecha_captura"])
-        df_temp = df.dropna(subset=["fecha_captura"]).copy()
+        df["dia"] = pd.to_datetime(df["dia"])
+        df_temp = df.dropna(subset=["dia"]).copy()
 
         if len(df_temp) == 0:
             st.info("No hay datos con fecha de captura para el periodo y filtros seleccionados.")
