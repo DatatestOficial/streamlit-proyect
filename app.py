@@ -155,12 +155,16 @@ def cargar_geojson(ruta):
         return json.load(f)
 
 
-def crear_dona(df_dona, titulo, colores_lista=None, height=420):
+def crear_dona(df_dona, titulo, colores_lista=None, height=480):
     if colores_lista is None:
         colores_lista = PALETA_INSTITUCIONAL
 
     colores = colores_lista[:len(df_dona)]
 
+    df_dona = df_dona.copy() # Evita modificar el DataFrame original fuera de la función
+    df_dona['Categoria'] = df_dona.apply(
+        lambda r: f"{r['Categoria']}<br>({r['Personas'] / df_dona['Personas'].sum() *100:.2f}%)", axis=1
+    )
     fig = px.pie(
         df_dona,
         values="Personas",
@@ -177,21 +181,21 @@ def crear_dona(df_dona, titulo, colores_lista=None, height=420):
     )
 
     fig.update_traces(
-        textposition='inside',
-        textinfo='percent',
-        textfont=dict(size=14, color="white", family=FONT_FAMILY),
-        hovertemplate=(
-            "%{label}: "
-            "%{value:,.0f} "
-            "(%{percent}) personas actualizadas"
-            "<extra></extra>"
-        ),
-        marker=dict(line=dict(color='white', width=2))
+    textposition='inside',
+    textinfo='value+percent',
+    textfont=dict(size=16, color="white", family=FONT_FAMILY),
+    hovertemplate=(
+        "%{label}<br>"      # Salto después de la etiqueta
+        "%{value:,.0f}<br>" # Salto después del valor absoluto
+        # "(%{percent})<br>"      # Salto antes del texto final
+        "<extra></extra>"
+    ),
+    marker=dict(line=dict(color='white', width=2)),
     )
 
     fig.update_layout(
         hoverlabel=dict(
-            font_size=14, font_family=FONT_FAMILY,
+            font_size=18, font_family=FONT_FAMILY,
             bgcolor="white", font_color=VERDE, bordercolor=DORADO
         ),
         title=dict(
@@ -363,11 +367,11 @@ def crear_mapa_calor(df_original, geojson_data, estados_filtrados=None):
 
     df_completo["hover_text"] = df_completo.apply(
         lambda r: (
-            f"{r['NOMGEO']}: "
-            f"Meta : {r['Meta']:,.0f} (100%), "
-            f"Actualizados: {r['Actualizados']:,.0f} ({r['Pct_Avance']:.1f}%), "
-            f"Pendientes: {r['Pendientes']:,.0f} ({r['Pct_Pendientes']:.1f}%)"
-        ) if r["Meta"] > 0 else f"{r['NOMGEO']}: sin datos en este filtro",
+            f"<b>{r['NOMGEO']}:</b><br>"
+            f"Meta : {r['Meta']:,.0f} (100%),<br>"
+            f"Actualizados: {r['Actualizados']:,.0f} ({r['Pct_Avance']:.1f}%),<br>"
+            f"Pendientes: {r['Pendientes']:,.0f} ({r['Pct_Pendientes']:.1f}%)<br>"
+        ) if r["Meta"] > 0 else f"{r['NOMGEO']}:<br>Sin datos en este filtro",
         axis=1
     )
 
@@ -457,7 +461,7 @@ def crear_mapa_calor(df_original, geojson_data, estados_filtrados=None):
     fig.update_layout(
         map=dict(
             style="white-bg",
-            zoom=4.2,
+            zoom=4.7,
             center=dict(lat=23.6345, lon=-102.5528),
         ),
         title=dict(
@@ -466,7 +470,7 @@ def crear_mapa_calor(df_original, geojson_data, estados_filtrados=None):
             x=0.5, xanchor="center"
         ),
         hoverlabel=dict(
-            font_size=16, font_family=FONT_FAMILY,
+            font_size=18, font_family=FONT_FAMILY,
             bgcolor="white", font_color=VERDE, bordercolor=DORADO
         ),
         height=800,
@@ -737,13 +741,10 @@ geojson_data = cargar_geojson("Mapa_estatal_2022_INEGI.geojson")
 # ═══════════════════════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    st.markdown(f"""
-        
-            Panel de Control
-        
-    """, unsafe_allow_html=True)
+    st.header("Filtros de información")
 
     opcion = st.selectbox("Seleccionar proceso", ["Nacional", "Prueba piloto (8 estados)", "Caña","Reposición de tarjetas"])
+
 
 filtros = {
     "Nacional": None,
@@ -843,7 +844,7 @@ tab_avance, tab_cambios, tab_perfil, tab_detalle = st.tabs([
     "Avance General",
     "Indicadores",
     "Perfil Demográfico",
-    "Detalle de Registros"
+    "Concentrado de información"
 ])
 
 
@@ -853,17 +854,19 @@ tab_avance, tab_cambios, tab_perfil, tab_detalle = st.tabs([
 
 with tab_avance:
 
-    tab_mapa, tab_barras_estado, tab_temporal = st.tabs([
+    tab_mapa, tab_avance_estados, tab_temporal = st.tabs([
         "Mapa de calor",
-        "Avance por Estado",
-        "Avance Temporal"
+        "Por Estado",
+        "Por Periodo"
     ])
 
     with tab_mapa:
         fig_mapa = crear_mapa_calor(df_para_mapa, geojson_data, estados_seleccionados)
         st.plotly_chart(fig_mapa, width='stretch')
 
-    with tab_barras_estado:
+    with tab_avance_estados:
+        tab_barras_avance_est, tab_detalle_avance_est = st.tabs(["Barras", "Detalle"])
+
         df_estado = df.groupby(["NOM_EDO_PROD", "ACTUALIZADO"])["Personas"].sum().reset_index()
         df_total = df_estado.groupby("NOM_EDO_PROD")["Personas"].sum().reset_index()
         df_total.columns = ["NOM_EDO_PROD", "Total"]
@@ -888,19 +891,48 @@ with tab_avance:
         )
         fig_estado.update_traces(
             textposition='inside', insidetextanchor='middle',
-            textfont=dict(size=11, color="white", family=FONT_FAMILY),
-            hovertemplate="%{customdata[0]}: %{customdata[1]:,.0f} (%{customdata[2]:.1f}%) personas %{customdata[3]} <extra></extra>"
+            textfont=dict(size=22, color="white", family=FONT_FAMILY),
+            hovertemplate="<b>%{customdata[0]}:</b><br> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas %{customdata[3]} <extra></extra>"
         )
+        if len(df_estado) <= 3:
+            bar_gap = 0.8
+        else:
+            bar_gap = 0.15
+
         fig_estado.update_layout(
             title=dict(text="Avance por Entidad Federativa", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)),
-            hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO),
+            hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO),
             xaxis=dict(title=dict(text="Entidad Federativa", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=11, color="black", family=FONT_FAMILY), tickangle=-45),
-            yaxis=dict(title=dict(text="Porcentaje (%)", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, 115], ticksuffix="%", dtick=20),
-            bargap=0.15, height=560, template="plotly_white",
-            legend=dict(title=dict(text="Estatus", font=dict(size=14, color="black", family=FONT_FAMILY)), font=dict(size=14, family=FONT_FAMILY), orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            yaxis=dict(title=dict(text="Porcentaje (%)", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=16, color="black", family=FONT_FAMILY), range=[0, 115], ticksuffix="%", dtick=20),
+            bargap=bar_gap, height=600, template="plotly_white",
+            legend=dict(title=dict(text="Estatus", font=dict(size=16, color="black", family=FONT_FAMILY)), font=dict(size=16, family=FONT_FAMILY), orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
             margin=dict(l=50, t=80, r=30, b=130), uniformtext_minsize=9, uniformtext_mode='hide', paper_bgcolor="rgba(0,0,0,0)"
         )
-        st.plotly_chart(fig_estado, width='stretch')
+
+        with tab_barras_avance_est:
+            st.plotly_chart(fig_estado, width='stretch')
+
+        
+        with tab_detalle_avance_est:
+            df_estado_detalle = df_estado.pivot(index="NOM_EDO_PROD", columns="Estatus", values=["Personas", "Porcentaje"]).fillna(0)
+            df_estado_detalle.columns = ["_".join(col).strip() for col in df_estado_detalle.columns.values]
+            df_estado_detalle.reset_index(inplace=True)
+            df_estado_detalle["Total"] = df_estado_detalle["Personas_actualizadas"] + df_estado_detalle["Personas_pendientes"]
+            df_estado_detalle["Pct_Avance"] = (df_estado_detalle["Personas_actualizadas"] / df_estado_detalle["Total"] * 100).round(2).fillna(0)
+            df_estado_detalle["Pct_Pendientes"] = (100 - df_estado_detalle["Pct_Avance"]).round(2)
+            st.dataframe(df_estado_detalle[["NOM_EDO_PROD", "Personas_actualizadas", "Personas_pendientes", "Total", "Pct_Avance", "Pct_Pendientes"]].sort_values(["Pct_Avance","NOM_EDO_PROD"], ascending=[False, True]).reset_index(drop=True), 
+                         width='stretch',
+                         hide_index=True,
+                        #  height=600,
+                         column_config={
+                             "NOM_EDO_PROD": st.column_config.Column("Entidad Federativa"),
+                                "Personas_actualizadas": st.column_config.NumberColumn("Personas Actualizadas", format="accounting",step=1),
+                                "Personas_pendientes": st.column_config.NumberColumn("Personas Pendientes", format="accounting",step=1),
+                                "Total": st.column_config.NumberColumn("Total", format="accounting",step=1),
+                                "Pct_Avance": st.column_config.NumberColumn("Porcentaje de actualizados", format="%.2f%%",step=0.01),
+                                "Pct_Pendientes": st.column_config.NumberColumn("Porcentaje de pendientes", format="%.2f%%",step=0.01),
+                         }
+            )
 
     with tab_temporal:
         periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
@@ -921,29 +953,69 @@ with tab_avance:
 
             df_filtrado = df_agrupado.copy()
             total_personas = df_filtrado["Cantidad"].sum()
-            df_filtrado["Porcentaje"] = (df_filtrado["Cantidad"] / total_personas * 100).round(1) if total_personas > 0 else 0
+            df_filtrado["Porcentaje"] = (df_filtrado["Cantidad"] / total_personas * 100).round(2) if total_personas > 0 else 0
             df_filtrado["Acumulado"] = df_filtrado["Cantidad"].cumsum()
 
-            tab_barras_t, tab_acum, tab_linea = st.tabs(["Barras", "Acumulado", "Línea"])
+            tab_acum, tab_barras_t, tab_detalle_a_t = st.tabs(["Acumulado", "Barras", "Detalle"])
+
+            with tab_acum:
+                # 1. Creamos una lista para alternar la posición del texto y evitar que se encimen
+                fig_a = go.Figure()
+                fig_a.add_trace(go.Scatter(
+                    x=df_filtrado["Fecha"], 
+                    y=df_filtrado["Acumulado"], 
+                    mode="lines+markers+text", 
+                    text=df_filtrado["Acumulado"].apply(lambda x: f"{x:,.0f}"), 
+                    textposition="top center", 
+                    # CLAVE 2: Permite que el texto se dibuje fuera de los límites del eje sin cortarse
+                    cliponaxis=False, 
+                    textfont=dict(size=13, color=GUINDA, family=FONT_FAMILY), 
+                    line=dict(color="#235B4E", width=3), 
+                    marker=dict(size=10, color="#235B4E", line=dict(color="white", width=2)), 
+                    fill="tozeroy", 
+                    fillcolor="rgba(35, 91, 78, 0.08)", 
+                    customdata=np.column_stack([df_filtrado["Fecha"], df_filtrado["Acumulado"], df_filtrado["Cantidad"]]), 
+                    hovertemplate="<b>%{customdata[0]}:</b> %{customdata[1]:,.0f}<br>personas actualizadas<br>(%{customdata[2]:,.0f} del periodo)<extra></extra>"
+                ))
+                fig_a.update_layout(
+                    title=dict(text=f"Acumulado {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), 
+                    hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), 
+                    
+                    xaxis=dict(
+                        tickangle=-45, 
+                        title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), 
+                        tickfont=dict(size=14, color="black", family=FONT_FAMILY)
+                    ), 
+                    
+                    yaxis=dict(
+                        title=dict(text="Personas acumuladas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), 
+                        tickfont=dict(size=14, color="black", family=FONT_FAMILY)
+                    ), 
+                    
+                    height=510, 
+                    template="plotly_white", 
+                    # CLAVE 3: Damos un margen derecho (r) e izquierdo (l) extra al contenedor general
+                    margin=dict(t=40, b=40, l=40, r=40), 
+                    paper_bgcolor="rgba(0,0,0,0)"
+                )
+                st.plotly_chart(fig_a, width='stretch')
 
             with tab_barras_t:
                 fig_b = px.bar(df_filtrado, x="Fecha", y="Cantidad", text="Cantidad", custom_data=["Fecha", "Cantidad", "Porcentaje"], color_discrete_sequence=[DORADO])
-                fig_b.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=14, color=VERDE, family=FONT_FAMILY), hovertemplate="%{customdata[0]}: %{customdata[1]:,.0f} (%{customdata[2]:.1f}%) personas actualizadas<extra></extra>", marker_line_color="#52492E", marker_line_width=1.5, cliponaxis=False)
-                fig_b.update_layout(title=dict(text=f"Avance {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), xaxis=dict(title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), tickangle=-45), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_filtrado["Cantidad"].max() * 1.25]), height=500, template="plotly_white", margin=dict(t=80, b=100), paper_bgcolor="rgba(0,0,0,0)", bargap=0.15)
+                fig_b.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=14, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{customdata[0]}:</b> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas actualizadas<extra></extra>", marker_line_color="#52492E", marker_line_width=1.5, cliponaxis=False)
+                fig_b.update_layout(title=dict(text=f"Avance {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), xaxis=dict(title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), tickangle=-45), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_filtrado["Cantidad"].max() * 1.25]), height=500, template="plotly_white", margin=dict(t=80, b=100), paper_bgcolor="rgba(0,0,0,0)", bargap=0.15)
                 st.plotly_chart(fig_b, width='stretch')
 
-            with tab_acum:
-                fig_a = go.Figure()
-                fig_a.add_trace(go.Scatter(x=df_filtrado["Fecha"], y=df_filtrado["Acumulado"], mode="lines+markers+text", text=df_filtrado["Acumulado"].apply(lambda x: f"{x:,.0f}"), textposition="top center", textfont=dict(size=13, color=GUINDA, family=FONT_FAMILY), line=dict(color="#235B4E", width=3), marker=dict(size=10, color="#235B4E", line=dict(color="white", width=2)), fill="tozeroy", fillcolor="rgba(35, 91, 78, 0.08)", customdata=np.column_stack([df_filtrado["Fecha"], df_filtrado["Acumulado"], df_filtrado["Cantidad"]]), hovertemplate="%{customdata[0]}: %{customdata[1]:,.0f} personas actualizadas (%{customdata[2]:,.0f} del periodo)<extra></extra>"))
-                fig_a.update_layout(title=dict(text=f"Acumulado {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), xaxis=dict(tickangle=-45, title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY)), yaxis=dict(title=dict(text="Personas acumuladas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY)), height=500, template="plotly_white", margin=dict(t=80, b=100), paper_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig_a, width='stretch')
-
-            with tab_linea:
-                fig_l = go.Figure()
-                fig_l.add_trace(go.Scatter(x=df_filtrado["Fecha"], y=df_filtrado["Cantidad"], mode="lines+markers+text", text=df_filtrado["Cantidad"].apply(lambda x: f"{x:,.0f}"), textposition="top center", textfont=dict(size=13, color=GUINDA, family=FONT_FAMILY), line=dict(color="#C29E5C", width=3, shape="spline"), marker=dict(size=10, color="#691C32", line=dict(color="white", width=2)), customdata=np.column_stack([df_filtrado["Fecha"], df_filtrado["Cantidad"], df_filtrado["Porcentaje"]]), hovertemplate="%{customdata[0]}: %{customdata[1]:,.0f} (%{customdata[2]:.1f}%) personas actualizadas<extra></extra>"))
-                fig_l.update_layout(title=dict(text=f"Tendencia {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), xaxis=dict(tickangle=-45, title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY)), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_filtrado["Cantidad"].max() * 1.3]), height=500, template="plotly_white", margin=dict(t=80, b=100), paper_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig_l, width='stretch')
-
+            with tab_detalle_a_t:
+                st.markdown(f"<span style='color: {GUINDA}; font-size: 20px; font-weight: bold;'>Detalle del avance {periodo}</span>", unsafe_allow_html=True)
+                st.dataframe(df_filtrado[["Fecha", "Cantidad", "Porcentaje","Acumulado"]]
+                             .sort_values(by="Fecha", ascending=False)
+                             .rename(columns={"Fecha": "Periodo", "Cantidad": "Personas actualizadas"}),
+                             column_config={"Porcentaje": st.column_config.NumberColumn(format="%.2f%%"),
+                                            "Personas actualizadas": st.column_config.NumberColumn(format="accounting",step=1),
+                                            "Acumulado": st.column_config.NumberColumn(format="accounting",step=1)},
+                             width='stretch',
+                             hide_index=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2: ANÁLISIS DE CAMBIOS
@@ -963,13 +1035,16 @@ with tab_cambios:
 
     for i, (variable, titulo) in enumerate(variables_dona_1.items()):
         df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-        df_dona.columns = ["Categoria", "Personas"]
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
         with columnas_c[i]:
-            tab_d, tab_w = st.tabs(["Dona", "Waffle"])
+            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
             with tab_d:
-                st.plotly_chart(crear_dona(df_dona, titulo), width='stretch')
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
             with tab_w:
-                st.plotly_chart(crear_waffle(df_dona, titulo), width='stretch')
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+                # st.plotly_chart(crear_waffle(df_dona, titulo), width='stretch')
 
     separador()
 
@@ -977,24 +1052,24 @@ with tab_cambios:
     columnas_c2 = [col1, col2, col3]
 
     variables_dona_2 = {
-        "regimen": "Régimen hídrico",
+        "regimen_predominante": "Régimen hídrico",
         "ciclo": "Ciclo productivo",
         "genero": "Género",
     }
 
     for i, (variable, titulo) in enumerate(variables_dona_2.items()):
         df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-        df_dona.columns = ["Categoria", "Personas"]
-        if variable == "genero":
-            colores_var = ["#235B4E", "#691C32", "#C29E5C"]
-        else:
-            colores_var = None
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+        # colores_var = ["#235B4E", "#691C32", "#C29E5C"]
         with columnas_c2[i]:
-            tab_d2, tab_w2 = st.tabs(["Dona", "Waffle"])
+            tab_d2, tab_w2 = st.tabs(["Dona", "Detalle"])
             with tab_d2:
-                st.plotly_chart(crear_dona(df_dona, titulo, colores_lista=colores_var), width='stretch')
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
             with tab_w2:
-                st.plotly_chart(crear_waffle(df_dona, titulo, colores_lista=colores_var), width='stretch')
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+                # st.plotly_chart(crear_waffle(df_dona, titulo, colores_lista=colores_var), width='stretch')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1006,46 +1081,66 @@ with tab_perfil:
 
     df_edad = df.groupby(["Ord_Grupos_Edad", "Grupos_Edad"])["Personas"].sum().reset_index()
     df_edad = df_edad.sort_values("Ord_Grupos_Edad").reset_index(drop=True)
-    total_personas_edad = df_edad["Personas"].sum()
-    df_edad["Porcentaje"] = (df_edad["Personas"] / total_personas_edad * 100).round(1) if total_personas_edad > 0 else 0
+    # total_personas_edad = df_edad["Personas"].sum()
+    df_edad["Porcentaje"] = (df_edad["Personas"] / df_edad["Personas"].sum() * 100).round(1) if df_edad["Personas"].sum() > 0 else 0
     colores_edad = (PALETA_INSTITUCIONAL * 3)[:len(df_edad)]
 
-    tab_edad_barras, tab_edad_waffle = st.tabs(["Barras por Edad", "Waffle por Edad"])
+    col1_tap_perfil, col2_tap_perfil = st.columns(2)
 
-    with tab_edad_barras:
-        fig_edad_v = px.bar(df_edad, x="Grupos_Edad", y="Personas", text="Personas", color="Grupos_Edad", custom_data=["Grupos_Edad", "Personas", "Porcentaje"], color_discrete_sequence=colores_edad, category_orders={"Grupos_Edad": df_edad["Grupos_Edad"].tolist()})
-        fig_edad_v.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="%{customdata[0]} años: %{customdata[1]:,.0f} (%{customdata[2]:.1f}%) personas actualizadas<extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1.5)
-        fig_edad_v.update_layout(title=dict(text="Distribución por Grupos de Edad", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), xaxis=dict(title=dict(text="Grupo de Edad", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickangle=-45, tickfont=dict(size=12, color="black", family=FONT_FAMILY)), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_edad["Personas"].max() * 1.25] if len(df_edad) > 0 else [0, 1]), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), showlegend=False, bargap=0.2, height=500, template="plotly_white", margin=dict(t=60, b=100, l=50, r=20), paper_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_edad_v, width='stretch')
+    with col1_tap_perfil:
+        tab_edad_barras, tab_edad_detalle = st.tabs(["Barras", "Detalle"])
 
-    with tab_edad_waffle:
-        df_edad_waffle = df_edad[["Grupos_Edad", "Personas"]].copy()
-        df_edad_waffle.columns = ["Categoria", "Personas"]
-        st.plotly_chart(crear_waffle(df_edad_waffle, "Proporción por Edad", colores_lista=colores_edad, height=500), width='stretch')
+        with tab_edad_barras:
+            fig_edad_v = px.bar(df_edad, x="Grupos_Edad", y="Personas", text="Personas", color="Grupos_Edad", custom_data=["Grupos_Edad", "Personas", "Porcentaje"], color_discrete_sequence=colores_edad, category_orders={"Grupos_Edad": df_edad["Grupos_Edad"].tolist()})
+            fig_edad_v.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{customdata[0]} años:</b> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas actualizadas<extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1.5)
+            fig_edad_v.update_layout(title=dict(text="Distribución por Grupos de Edad", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), xaxis=dict(title=dict(text="Grupo de Edad", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickangle=-45, tickfont=dict(size=12, color="black", family=FONT_FAMILY)), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_edad["Personas"].max() * 1.25] if len(df_edad) > 0 else [0, 1]), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), showlegend=False, bargap=0.2, height=500, template="plotly_white", margin=dict(t=60, b=100, l=50, r=20), paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(fig_edad_v, width='stretch')
+
+        with tab_edad_detalle:
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por grupos de edad</span>", unsafe_allow_html=True)
+            st.dataframe(df_edad[["Grupos_Edad", "Personas", "Porcentaje"]], width='stretch', hide_index=True, column_config={"Grupos_Edad": st.column_config.Column("Grupos de Edad"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
+
+    with col2_tap_perfil:
+        dona_genero, detalle_genero = st.tabs(["Dona", "Detalle"])
+
+        df_genero = df.groupby("genero")["Personas"].sum().reset_index()
+        df_genero["Porcentaje"] = (df_genero["Personas"] / df_genero["Personas"].sum() * 100).round(2) if df_genero["Personas"].sum() > 0 else 0
+        df_genero.columns = ["Categoria", "Personas","Porcentaje"]
+
+        with dona_genero:
+            st.plotly_chart(crear_dona(df_genero[["Categoria", "Personas"]], "Distribución por género", colores_lista=["#235B4E", "#691C32"]), width='stretch')
+        with detalle_genero:
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por género</span>", unsafe_allow_html=True)
+            st.dataframe(df_genero, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Género"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
+
 
     separador("Estatus documental y geográfico")
 
     col1, col2 = st.columns(2)
 
     df_coord = df.groupby("Estatus_coordenadas")["Personas"].sum().reset_index()
-    df_coord.columns = ["Categoria", "Personas"]
+    df_coord["Porcentaje"] = (df_coord["Personas"] / df_coord["Personas"].sum() * 100).round(2) if df_coord["Personas"].sum() > 0 else 0
+    df_coord.columns = ["Categoria", "Personas","Porcentaje"]
 
     with col1:
-        tab_coord_dona, tab_coord_waffle = st.tabs(["Dona - Coordenadas", "Waffle - Coordenadas"])
+        tab_coord_dona, tab_coord_waffle = st.tabs(["Dona", "Detalle"])
         with tab_coord_dona:
-            st.plotly_chart(crear_dona(df_coord, "Estatus de coordenadas", height=420), width='stretch')
+            st.plotly_chart(crear_dona(df_coord[[ "Categoria","Personas" ]], "Estatus de coordenadas", height=420), width='stretch')
         with tab_coord_waffle:
-            st.plotly_chart(crear_waffle(df_coord, "Estatus de coordenadas", height=420), width='stretch')
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por estatus de coordenadas</span>", unsafe_allow_html=True)
+            st.dataframe(df_coord, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Categoría"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%")})
 
     df_doc = df.groupby("EstatusDocProp")["Personas"].sum().reset_index()
-    df_doc.columns = ["Categoria", "Personas"]
+    df_doc["Porcentaje"] = (df_doc["Personas"] / df_doc["Personas"].sum() * 100).round(2) if df_doc["Personas"].sum() > 0 else 0
+    df_doc.columns = ["Categoria", "Personas","Porcentaje"]
 
     with col2:
-        tab_doc_dona, tab_doc_waffle = st.tabs(["Dona - Documento", "Waffle - Documento"])
+        tab_doc_dona, tab_doc_waffle = st.tabs(["Dona", "Detalle"])
         with tab_doc_dona:
-            st.plotly_chart(crear_dona(df_doc, "Documento de posesión", height=420), width='stretch')
+            st.plotly_chart(crear_dona(df_doc[[ "Categoria","Personas" ]], "Documento de posesión", height=420), width='stretch')
         with tab_doc_waffle:
-            st.plotly_chart(crear_waffle(df_doc, "Documento de posesión", height=420), width='stretch')
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por estatus de documento</span>", unsafe_allow_html=True)
+            st.dataframe(df_doc, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Categoría"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%")})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1064,7 +1159,7 @@ with tab_detalle:
             df_cultivo["Porcentaje"] = (df_cultivo["Personas"] / df_cultivo["Personas"].sum() * 100).round(1)
 
             fig_cultivo = px.bar(df_cultivo.sort_values("Personas", ascending=True), y="NOM_CULTIVO", x="Personas", text=df_cultivo.sort_values("Personas", ascending=True).apply(lambda r: f"{r['Personas']:,.0f}", axis=1), color_discrete_sequence=["#235B4E"], orientation="h")
-            fig_cultivo.update_traces(textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="%{y}  Personas : %{x:,.0f} <extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1)
+            fig_cultivo.update_traces(textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{y}:</b><br> Personas : %{x:,.0f} <extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1)
             fig_cultivo.update_layout(title=dict(text="Top 20 Cultivos", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), yaxis=dict(title=dict(text="Cultivo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=12, color="black", family=FONT_FAMILY)), xaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY)), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), height=600, template="plotly_white", margin=dict(t=60, b=40, l=180, r=80), paper_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_cultivo, width='stretch')
             st.dataframe(df_cultivo[["NOM_CULTIVO", "Personas", "Porcentaje"]].rename(columns={"NOM_CULTIVO": "Cultivo", "Porcentaje": "% del total"}), width='stretch', hide_index=True)
@@ -1073,11 +1168,11 @@ with tab_detalle:
 
     with tab_entidad:
         if "NOM_EDO_PROD" in df.columns:
-            df_pivot = df.groupby(["NOM_EDO_PROD", "genero", "regimen"])["Personas"].sum().reset_index()
+            df_pivot = df.groupby(["NOM_EDO_PROD", "genero", "regimen_predominante"])["Personas"].sum().reset_index()
 
             tabla_pivot = df_pivot.pivot_table(
                 index="NOM_EDO_PROD",
-                columns=["genero", "regimen"],
+                columns=["genero", "regimen_predominante"],
                 values="Personas",
                 aggfunc="sum",
                 fill_value=0,
