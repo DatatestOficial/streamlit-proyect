@@ -9,7 +9,6 @@ import datetime
 from datetime import date
 import json
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN INICIAL
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -154,6 +153,83 @@ def cargar_geojson(ruta):
     with open(ruta, "r", encoding="utf-8") as f:
         return json.load(f)
 
+def crear_barras(df_barras, titulo, colores_lista=None, height=480):
+    if colores_lista is None:
+        colores_lista = PALETA_INSTITUCIONAL
+
+    # Ajusta los colores según la cantidad de categorías
+    colores = colores_lista[:len(df_barras)]
+
+    # df_barras = df_barras.copy() # Evita modificar el DataFrame original fuera de la función
+    
+    # # Mantiene la misma lógica de etiquetas con porcentaje
+    # df_barras['Categoria_Etiqueta'] = df_barras.apply(
+    #     lambda r: f"<b>{r['Categoria']}</b> <br>({r['Personas'] / df_barras['Personas'].sum() * 100:.2f}%)", axis=1
+    # )
+    
+    # Creación del gráfico de barras
+    fig = px.bar(
+        df_barras,
+        x="Categoria",
+        y="Personas",
+        color="Categoria", # Permite aplicar la secuencia de colores por categoría
+        color_discrete_sequence=colores,
+    )
+
+    # Configuración de los trazos (barras)
+    fig.update_traces(
+        texttemplate='%{y:,.0f}', # Muestra el valor absoluto sobre/dentro de la barra
+        textposition='outside', # Coloca el texto afuera para mejor lectura
+        textfont=dict(size=18, family="Noto Sans Black", color=VERDE),
+        cliponaxis=False, # Permite que las etiquetas se muestren incluso si salen del área del gráfico
+        textangle=-45, 
+        hovertemplate=(
+            "<b>%{x}</b>:<br>"          # Categoría y porcentaje
+            "%{y:,.0f}<br>"     # Valor absoluto
+            "<extra></extra>"
+        ),
+        marker=dict(line=dict(color='white', width=1)),
+    )
+
+    # Configuración del diseño global
+    fig.update_layout(
+        hoverlabel=dict(
+            font_size=18, font_family=FONT_FAMILY,
+            bgcolor="white", font_color=VERDE, bordercolor=DORADO
+        ),
+        title=dict(
+            text=titulo,
+            font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY),
+            x=0.5, xanchor="center"
+        ),
+        legend=dict(
+            font=dict(size=18, family=FONT_FAMILY),
+            orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5,
+            title=None # Elimina el título automático de la leyenda
+        ),
+        xaxis=dict(
+            title=None, # Quita el título del eje X porque la etiqueta es clara
+            tickfont=dict(size=14, family=FONT_FAMILY, color="Black"),
+            tickangle=-45
+        ),
+        yaxis=dict(
+            # SOLUCIÓN: El texto y su fuente ahora van estructurados correctamente aquí
+            title=dict(
+                text="Personas",
+                font=dict(size=18, family=FONT_FAMILY, color=GUINDA)
+            ),
+            tickfont=dict(size=14, family=FONT_FAMILY),
+            gridcolor="rgba(0,0,0,0.1)", # Línea de cuadrícula sutil
+            range=[0, df_barras['Personas'].max() * 1.10],
+        ),
+        height=height,
+        margin=dict(t=60, b=80, l=40, r=20),
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)" # Fondo del gráfico transparente
+    )
+
+    return fig
 
 def crear_dona(df_dona, titulo, colores_lista=None, height=480):
     if colores_lista is None:
@@ -163,7 +239,7 @@ def crear_dona(df_dona, titulo, colores_lista=None, height=480):
 
     df_dona = df_dona.copy() # Evita modificar el DataFrame original fuera de la función
     df_dona['Categoria'] = df_dona.apply(
-        lambda r: f"{r['Categoria']}<br>({r['Personas'] / df_dona['Personas'].sum() *100:.2f}%)", axis=1
+        lambda r: f"<b>{r['Categoria']}</b> <br>({r['Personas'] / df_dona['Personas'].sum() * 100:.2f}%)", axis=1
     )
     fig = px.pie(
         df_dona,
@@ -182,7 +258,7 @@ def crear_dona(df_dona, titulo, colores_lista=None, height=480):
 
     fig.update_traces(
     textposition='inside',
-    textinfo='value+percent',
+    textinfo='percent+value',
     textfont=dict(size=16, color="white", family=FONT_FAMILY),
     hovertemplate=(
         "%{label}<br>"      # Salto después de la etiqueta
@@ -214,7 +290,6 @@ def crear_dona(df_dona, titulo, colores_lista=None, height=480):
     )
 
     return fig
-
 
 def crear_waffle(df_waffle, titulo, colores_lista=None, n_cols=10, n_rows=10, height=420):
     """Waffle simple: cuadros grandes con líneas blancas mínimas."""
@@ -827,8 +902,9 @@ if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin
 actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
 pendientes = meta - actualizados
 pct_avance = actualizados / meta * 100 if meta > 0 else 0
+pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas'].sum() if len(df) > 0 else 0) / actualizados * 100 if actualizados > 0 else 0
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     st.metric("Meta de actualización", f"{meta:,.0f}", "100%")
@@ -839,6 +915,11 @@ with col2:
 with col3:
     st.metric("Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
 
+with col4:
+    st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
+
+with col5:
+    st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TABS PRINCIPALES
@@ -846,8 +927,8 @@ with col3:
 
 tab_avance, tab_cambios, tab_perfil, tab_detalle = st.tabs([
     "Avance General",
-    "Indicadores",
-    "Perfil Demográfico",
+    "Aspectos productivos",
+    "Aspectos demográficos",
     "Concentrado de información"
 ])
 
@@ -918,25 +999,26 @@ with tab_avance:
 
         
         with tab_detalle_avance_est:
+            # 1. Crear DataFrame pivoteado
             df_estado_detalle = df_estado.pivot(index="NOM_EDO_PROD", columns="Estatus", values=["Personas", "Porcentaje"]).fillna(0)
+            # 3. Aplanar el MultiIndex de las columnas (Ej: ('Personas', 'actualizadas') -> 'Personas_actualizadas')
+            # df_estado_detalle.columns = [f"{col[0]}_{col[1]}" for col in df_estado_detalle.columns]
             df_estado_detalle.columns = ["_".join(col).strip() for col in df_estado_detalle.columns.values]
-            df_estado_detalle.reset_index(inplace=True)
-            df_estado_detalle["Total"] = df_estado_detalle["Personas_actualizadas"] + df_estado_detalle["Personas_pendientes"]
-            df_estado_detalle["Pct_Avance"] = (df_estado_detalle["Personas_actualizadas"] / df_estado_detalle["Total"] * 100).round(2).fillna(0)
-            df_estado_detalle["Pct_Pendientes"] = (100 - df_estado_detalle["Pct_Avance"]).round(2)
-            st.dataframe(df_estado_detalle[["NOM_EDO_PROD", "Personas_actualizadas", "Personas_pendientes", "Total", "Pct_Avance", "Pct_Pendientes"]].sort_values(["Pct_Avance","NOM_EDO_PROD"], ascending=[False, True]).reset_index(drop=True), 
-                         width='stretch',
-                         hide_index=True,
-                        #  height=600,
-                         column_config={
-                             "NOM_EDO_PROD": st.column_config.Column("Entidad Federativa"),
-                                "Personas_actualizadas": st.column_config.NumberColumn("Personas Actualizadas", format="accounting",step=1),
-                                "Personas_pendientes": st.column_config.NumberColumn("Personas Pendientes", format="accounting",step=1),
-                                "Total": st.column_config.NumberColumn("Total", format="accounting",step=1),
-                                "Pct_Avance": st.column_config.NumberColumn("Porcentaje de actualizados", format="%.2f%%",step=0.01),
-                                "Pct_Pendientes": st.column_config.NumberColumn("Porcentaje de pendientes", format="%.2f%%",step=0.01),
-                         }
-            )
+            # 4. Calcular la columna Total Personas (sumando solo las columnas que empiezan con 'Personas_')
+            columnas_personas = [col for col in df_estado_detalle.columns if col.startswith("Personas_")]
+            df_estado_detalle["Total_Personas"] = df_estado_detalle[columnas_personas].sum(axis=1)
+            # 5. Configurar columnas dinámicamente usando strings planos
+            config_columnas = {
+                "NOM_EDO_PROD": st.column_config.Column("Entidad Federativa"),
+                **{col: st.column_config.NumberColumn(f"{col.replace('_', ' ')}", format="accounting", step=1) for col in df_estado_detalle.columns if col.startswith("Personas_")},
+                **{col: st.column_config.NumberColumn(f"{col.replace('_', ' ')}", format="%.1f%%", step=0.01) for col in df_estado_detalle.columns if col.startswith("Porcentaje_")},
+                "Total_Personas": st.column_config.NumberColumn("Total Personas", format="accounting", step=1)
+            }
+
+            # 6. Mostrar en Streamlit
+            st.dataframe(df_estado_detalle, width='stretch', column_config=config_columnas)
+
+
 
     with tab_temporal:
         periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
@@ -1026,39 +1108,12 @@ with tab_avance:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 with tab_cambios:
-    separador("Análisis de cambios detectados")
-
-    col1, col2, col3 = st.columns(3)
-    columnas_c = [col1, col2, col3]
-
-    variables_dona_1 = {
-        "Cambio_sup": "Cambio de Superficie",
-        "Cambio_cultivo": "Cambio de Cultivo",
-        "tipo_posesion": "Tipo de Posesión"
-    }
-
-    for i, (variable, titulo) in enumerate(variables_dona_1.items()):
-        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-        with columnas_c[i]:
-            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
-            with tab_d:
-                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
-            with tab_w:
-                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-                # st.plotly_chart(crear_waffle(df_dona, titulo), width='stretch')
-
-    separador()
-
     col1, col2, col3 = st.columns(3)
     columnas_c2 = [col1, col2, col3]
-
     variables_dona_2 = {
         "regimen_predominante": "Régimen hídrico",
         "ciclo": "Ciclo productivo",
-        "genero": "Género",
+        "tipo_posesion": "Tipo de Posesión"
     }
 
     for i, (variable, titulo) in enumerate(variables_dona_2.items()):
@@ -1073,8 +1128,54 @@ with tab_cambios:
                 st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
             with tab_w2:
                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-                # st.plotly_chart(crear_waffle(df_dona, titulo, colores_lista=colores_var), width='stretch')
 
+    col1, col2 = st.columns(2)
+    columnas_c3 = [col1, col2]
+    variables_dona_3 = {
+        "Grupo_Superficie": "Gropos de superficie",
+        "Estrategia_predominante": "Estrategia",
+    }
+
+    for i, (variable, titulo) in enumerate(variables_dona_3.items()):
+        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+        with columnas_c3[i]:
+            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
+            with tab_d:
+                st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
+            with tab_w:
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+
+    col1, col2 = st.columns(2)
+    columnas_c = [col1, col2]
+    variables_dona_1 = {
+        "Cambio_sup": "Cambio de Superficie",
+        "Cambio_cultivo": "Cambio de Cultivo",
+    }
+
+    for i, (variable, titulo) in enumerate(variables_dona_1.items()):
+        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+        with columnas_c[i]:
+            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
+            with tab_d:
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
+            with tab_w:
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+
+    df_dona = df.groupby("cultivo_predominante")["Personas"].sum().reset_index()
+    df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+    df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+    df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+    tab_d0, tab_w0 = st.tabs(["Dona", "Detalle"])
+    with tab_d0:
+        st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], "Cultivos", colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
+    with tab_w0:
+        st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Cultivo"), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 3: PERFIL DEMOGRÁFICO
@@ -1239,9 +1340,10 @@ if st.button("Descargar informe", type="primary"):
 
 st.divider() # Una línea sutil para separar el contenido
 with st.expander("Información Legal y de Privacidad"):
-    st.markdown("""
+    st.markdown(f"""
     **Aviso de Uso Interno e Informativo**  
-    Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.
-
-    Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.
-    """)
+    Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br>
+    <br>
+    Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.<br>
+    {st.secrets["password"] if "password" in st.secrets else "Nada"}
+    """, unsafe_allow_html=True)
