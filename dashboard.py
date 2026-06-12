@@ -21,7 +21,7 @@ def dashboard_page():
     )
 
     if st.session_state.get("authenticated")==True:
-        st.toast(f"- Biemvenido {st.session_state['username']}", icon="👋")
+        st.toast(f"- {st.session_state['username']}", icon="👋")
 
 
     # Colores institucionales
@@ -937,13 +937,14 @@ def dashboard_page():
     with col3:
         st.metric("Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
 
-    cl1, col4, cl2, col5, cl3 = st.columns([1,3,1,3,1])
 
-    with col4:
-        st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
+    if st.session_state['username'] == 'admin':
+        cl1, col4, cl2, col5, cl3 = st.columns([1,3,1,3,1])
+        with col4:
+            st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
 
-    with col5:
-        st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
+        with col5:
+            st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # TABS PRINCIPALES
