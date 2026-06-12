@@ -585,7 +585,7 @@ def generar_presentacion_pdf(df, meta, actualizados, pendientes, pct_avance, hoy
     ))
     elements.append(Spacer(1, 0.1 * inch))
     elements.append(Paragraph(
-        "Dirección General de la Operación y Explotación del Padrón",
+        "Dirección General de Producción para el Bienestar",
         ParagraphStyle('Cierre3', fontName='Helvetica', fontSize=12, textColor=gris_oscuro, alignment=TA_CENTER)
     ))
     elements.append(Spacer(1, 0.8 * inch))
