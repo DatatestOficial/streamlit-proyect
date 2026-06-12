@@ -17,12 +17,10 @@ def dashboard_page():
     st.set_page_config(
     page_title="PROBIEN",
     page_icon="🌽",
-    layout="wide"
-    )
+    layout="wide")
 
     if st.session_state.get("authenticated")==True:
         st.toast(f"- {st.session_state['username']}", icon="👋")
-
 
     # Colores institucionales
     GUINDA = "#621132"
@@ -843,10 +841,6 @@ def dashboard_page():
         "Prueba piloto (8 estados)": df["OCHO_ENT"]== "Si",
         "Reposición de tarjetas": df["reposición_tarjeta"] == "Si",
         "Enviados a OREF (corrección)": df["enviados_incongruencias"] == "Si",
-        # "Prueba piloto (8 estados)": df["OCHO_ENT"].isin([
-        #     "CIUDAD DE MEXICO", "DURANGO", "MORELOS", "NAYARIT",
-        #     "PUEBLA", "QUERETARO DE ARTEAGA", "TLAXCALA", "ZACATECAS"
-        # ])
     }
 
 
@@ -864,7 +858,6 @@ def dashboard_page():
             )
         else:
             estados = []
-
 
     # Guardar copia para el mapa
     df_para_mapa = df.copy()
@@ -1278,34 +1271,17 @@ def dashboard_page():
 
         with tab_cader:
             if "NOM_EDO_PROD" in df.columns:
-                df_pivot = df.groupby(["NOM_EDO_PROD", "genero", "regimen_predominante"])["Personas"].sum().reset_index()
+                df_pivot = df.groupby(["NOM_EDO_PROD", "nombre_ddr_solicitud", "nombre_cader_solicitud"])[["Personas", "Registros"]].sum().reset_index().sort_values("NOM_EDO_PROD", ascending=False).reset_index(drop=True)
+                df_pivot = df_pivot.rename(columns={"NOM_EDO_PROD": "Entidad Federativa", "nombre_ddr_solicitud": "DDR", "nombre_cader_solicitud": "CADER"})
 
-                tabla_pivot = df_pivot.pivot_table(
-                    index="NOM_EDO_PROD",
-                    columns=["genero", "regimen_predominante"],
-                    values="Personas",
-                    aggfunc="sum",
-                    fill_value=0,
-                    margins=True,
-                    margins_name="Total"
-                )
-
-                tabla_pivot.columns = [f"{g} - {r}" if g != "Total" else "Total" for g, r in tabla_pivot.columns]
-
-                if "Total" in tabla_pivot.index:
-                    fila_total = tabla_pivot.loc[["Total"]]
-                    tabla_sin_total = tabla_pivot.drop("Total").sort_values("Total", ascending=False)
-                    tabla_pivot = pd.concat([tabla_sin_total, fila_total])
-
-                tabla_pivot = tabla_pivot.reset_index().rename(columns={"NOM_EDO_PROD": "Entidad Federativa"})
-
-                st.dataframe(tabla_pivot, width='stretch', hide_index=True)
+                st.dataframe(df_pivot, width='stretch', hide_index=True)
             else:
                 st.info("Columna 'NOM_EDO_PROD' no disponible.")
 
         with tab_documentos:
-            df_cader = df.groupby(["DescripciónDocumentoPoseción"])[["Personas","Registros"]].sum().reset_index().sort_values("Personas", ascending=False).reset_index(drop=True)
-            st.dataframe(df_cader, width='stretch', hide_index=True)
+            df_doc = df.groupby(["clave_documento_propiedad","nombre_documento_propiedad","EstatusDocProp"])[["Personas","Registros"]].sum().reset_index().sort_values("Personas", ascending=False).reset_index(drop=True)
+            df_doc = df_doc.rename(columns={"clave_documento_propiedad": "Clave", "nombre_documento_propiedad": "Nombre Documento", "EstatusDocProp": "Estatus"})
+            st.dataframe(df_doc, width='stretch', hide_index=True)
 
 
 
