@@ -15,11 +15,11 @@ import streamlit as st
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN INICIAL
 # ═══════════════════════════════════════════════════════════════════════════════
-st.set_page_config(
-    page_title="PROBIEN",
-    page_icon="🌽",
-    layout="wide"
-)
+# st.set_page_config(
+#     page_title="PROBIEN",
+#     page_icon="🌽",
+#     layout="wide"
+# )
 
 # --- Control de flujo principal ---
 def main():

@@ -1,12 +1,6 @@
 import streamlit as st
 import hashlib
 
-# --- Configuración de la página ---
-st.set_page_config(
-    page_title="Login",
-    page_icon="🔐",
-    layout="centered"
-)   
 
 # --- Base de datos simulada de usuarios ---
 # En producción, usar una base de datos real
@@ -37,6 +31,13 @@ def verificar_credenciales(username: str, password: str) -> bool:
 
 
 def login_page():
+    # --- Configuración de la página ---
+    st.set_page_config(
+        page_title="Login",
+        page_icon="🔐",
+        layout="centered"
+    )   
+
     """Muestra la página de login."""
     st.markdown(
         """
