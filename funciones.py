@@ -1,86 +1,87 @@
-# import pandas as pd
-# import plotly.express as px
-# import plotly.graph_objects as go
-# import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
 
-# def graficar_barras_porcentaje(df, col_x, col_color, col_valores="Personas", titulo="Avance", lista_colores=None):
-#     """
-#     Crea una gráfica de barras apiladas en porcentajes optimizada para Streamlit.
-#     Soporta una lista de colores personalizada de cualquier tamaño.
-#     """
-#     # 1. Validación de seguridad para que la app nunca falle
-#     if df is None or df.empty or col_x not in df.columns or col_color not in df.columns:
-#         fig_vacia = go.Figure()
-#         fig_vacia.update_layout(
-#             title=f"{titulo} (Sin datos disponibles)",
-#             xaxis={"visible": False}, yaxis={"visible": False},
-#             annotations=[{"text": "No hay datos para mostrar", "textangle": 0, "showarrow": False, "font": {"size": 20}}]
-#         )
-#         return fig_vacia
 
-#     try:
-#         # 2. Agrupar y calcular totales/porcentajes
-#         df_agrupado = df.groupby([col_x, col_color])[col_valores].sum().reset_index()
-#         df_total = df_agrupado.groupby(col_x)[col_valores].sum().reset_index().rename(columns={col_valores: 'Total_X'})
+def graficar_barras_porcentaje(df, col_x, col_color, col_valores="Personas", titulo="Avance", lista_colores=None):
+    """
+    Crea una gráfica de barras apiladas en porcentajes optimizada para Streamlit.
+    Soporta una lista de colores personalizada de cualquier tamaño.
+    """
+    # 1. Validación de seguridad para que la app nunca falle
+    if df is None or df.empty or col_x not in df.columns or col_color not in df.columns:
+        fig_vacia = go.Figure()
+        fig_vacia.update_layout(
+            title=f"{titulo} (Sin datos disponibles)",
+            xaxis={"visible": False}, yaxis={"visible": False},
+            annotations=[{"text": "No hay datos para mostrar", "textangle": 0, "showarrow": False, "font": {"size": 20}}]
+        )
+        return fig_vacia
+
+    try:
+        # 2. Agrupar y calcular totales/porcentajes
+        df_agrupado = df.groupby([col_x, col_color])[col_valores].sum().reset_index()
+        df_total = df_agrupado.groupby(col_x)[col_valores].sum().reset_index().rename(columns={col_valores: 'Total_X'})
         
-#         df_procesado = df_agrupado.merge(df_total, on=col_x)
-#         df_procesado["Porcentaje"] = (df_procesado[col_valores] / df_procesado["Total_X"] * 100).round(1)
+        df_procesado = df_agrupado.merge(df_total, on=col_x)
+        df_procesado["Porcentaje"] = (df_procesado[col_valores] / df_procesado["Total_X"] * 100).round(1)
 
-#         # 3. Definir orden descendente basado en la primera categoría del color
-#         categorias_color = df_procesado[col_color].unique()
-#         primer_color = categorias_color[0] if len(categorias_color) > 0 else ""
+        # 3. Definir orden descendente basado en la primera categoría del color
+        categorias_color = df_procesado[col_color].unique()
+        primer_color = categorias_color[0] if len(categorias_color) > 0 else ""
         
-#         df_orden = df_procesado[df_procesado[col_color] == primer_color].sort_values("Porcentaje", ascending=False)
-#         orden_x = df_orden[col_x].tolist()
+        df_orden = df_procesado[df_procesado[col_color] == primer_color].sort_values("Porcentaje", ascending=False)
+        orden_x = df_orden[col_x].tolist()
         
-#         todos_x = df_procesado[col_x].unique()
-#         orden_final = orden_x + [cat for cat in todos_x if cat not in orden_x]
+        todos_x = df_procesado[col_x].unique()
+        orden_final = orden_x + [cat for cat in todos_x if cat not in orden_x]
 
-#         # 4. Configuración dinámica del grosor de barras
-#         bar_gap = 0.8 if df_procesado[col_x].nunique() <= 3 else 0.15
+        # 4. Configuración dinámica del grosor de barras
+        bar_gap = 0.8 if df_procesado[col_x].nunique() <= 3 else 0.15
 
-#         # 5. ASIGNACIÓN INTELIGENTE DE COLORES
-#         color_map = {}
-#         if lista_colores and isinstance(lista_colores, list) and len(lista_colores) > 0:
-#             # Toma solo los colores necesarios. Si faltan, usa operador residuo (%) para ciclar la lista
-#             color_map = {cat: lista_colores[i % len(lista_colores)] for i, cat in enumerate(categorias_color)}
-#         else:
-#             # Paleta institucional fija por defecto si los nombres coinciden, o paleta segura de Plotly
-#             color_map_base = {"actualizadas": "#235B4E", "pendientes": "#D4C19C", "Si": "#235B4E", "No": "#D4C19C"}
-#             color_map = {cat: color_map_base.get(cat, px.colors.qualitative.Safe[i % 10]) for i, cat in enumerate(categorias_color)}
+        # 5. ASIGNACIÓN INTELIGENTE DE COLORES
+        color_map = {}
+        if lista_colores and isinstance(lista_colores, list) and len(lista_colores) > 0:
+            # Toma solo los colores necesarios. Si faltan, usa operador residuo (%) para ciclar la lista
+            color_map = {cat: lista_colores[i % len(lista_colores)] for i, cat in enumerate(categorias_color)}
+        else:
+            # Paleta institucional fija por defecto si los nombres coinciden, o paleta segura de Plotly
+            color_map_base = {"actualizadas": "#235B4E", "pendientes": "#D4C19C", "Si": "#235B4E", "No": "#D4C19C"}
+            color_map = {cat: color_map_base.get(cat, px.colors.qualitative.Safe[i % 10]) for i, cat in enumerate(categorias_color)}
 
-#         # 6. Construcción de la gráfica
-#         fig = px.bar(
-#             df_procesado, x=col_x, y="Porcentaje", color=col_color,
-#             text=df_procesado["Porcentaje"].apply(lambda x: f"{x:.1f}%"),
-#             custom_data=[col_x, col_valores, "Porcentaje", col_color],
-#             color_discrete_map=color_map,
-#             category_orders={col_x: orden_final},
-#             barmode="stack",
-#         )
+        # 6. Construcción de la gráfica
+        fig = px.bar(
+            df_procesado, x=col_x, y="Porcentaje", color=col_color,
+            text=df_procesado["Porcentaje"].apply(lambda x: f"{x:.1f}%"),
+            custom_data=[col_x, col_valores, "Porcentaje", col_color],
+            color_discrete_map=color_map,
+            category_orders={col_x: orden_final},
+            barmode="stack",
+        )
 
-#         # 7. Estilizado de textos internos y Tooltips
-#         fig.update_traces(
-#             textposition='inside', insidetextanchor='middle',
-#             textfont=dict(size=14, color="white"),
-#             hovertemplate="<b>%{customdata[0]}:</b><br> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>%{customdata[3]} <extra></extra>"
-#         )
+        # 7. Estilizado de textos internos y Tooltips
+        fig.update_traces(
+            textposition='inside', insidetextanchor='middle',
+            textfont=dict(size=14, color="white"),
+            hovertemplate="<b>%{customdata[0]}:</b><br> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>%{customdata[3]} <extra></extra>"
+        )
 
-#         # 8. Diseño del Layout
-#         fig.update_layout(
-#             title=dict(text=titulo, font=dict(size=20, color="#6A1B29")), 
-#             xaxis=dict(title=dict(text=str(col_x).capitalize()), tickangle=-45),
-#             yaxis=dict(title=dict(text="Porcentaje (%)"), range=[0, 115], ticksuffix="%", dtick=20),
-#             bargap=bar_gap, height=600, template="plotly_white",
-#             legend=dict(title=dict(text=str(col_color).capitalize()), orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-#             margin=dict(l=50, t=80, r=30, b=130), uniformtext_minsize=9, uniformtext_mode='hide', paper_bgcolor="rgba(0,0,0,0)"
-#         )
-#         return fig
+        # 8. Diseño del Layout
+        fig.update_layout(
+            title=dict(text=titulo, font=dict(size=20, color="#6A1B29")), 
+            xaxis=dict(title=dict(text=str(col_x).capitalize()), tickangle=-45),
+            yaxis=dict(title=dict(text="Porcentaje (%)"), range=[0, 115], ticksuffix="%", dtick=20),
+            bargap=bar_gap, height=600, template="plotly_white",
+            legend=dict(title=dict(text=str(col_color).capitalize()), orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+            margin=dict(l=50, t=80, r=30, b=130), uniformtext_minsize=9, uniformtext_mode='hide', paper_bgcolor="rgba(0,0,0,0)"
+        )
+        return fig
 
-#     except Exception:
-#         fig_error = go.Figure()
-#         fig_error.update_layout(title="Error al procesar la estructura de datos.", xaxis={"visible": False}, yaxis={"visible": False})
-#         return fig_error
+    except Exception:
+        fig_error = go.Figure()
+        fig_error.update_layout(title="Error al procesar la estructura de datos.", xaxis={"visible": False}, yaxis={"visible": False})
+        return fig_error
 
 
 # import streamlit as st
@@ -219,113 +220,113 @@
 #     mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
 # )
 
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.enum.text import PP_ALIGN
-from pptx.dml.color import RGBColor
+# from pptx import Presentation
+# from pptx.util import Inches, Pt
+# from pptx.enum.text import PP_ALIGN
+# from pptx.dml.color import RGBColor
 
-# 1. Definición completa de los datos
-data = [
-    [9, "Ciudad de México", "4,203", "4,348", 3, "2,425", "2,490", "57.7%", "57.3%", "1,778"],
-    [10, "Durango", "39,576", "54,298", 16, "34,500", "47,069", "87.2%", "86.7%", "5,076"],
-    [17, "Morelos", "15,249", "18,322", 6, "11,987", "14,429", "78.6%", "78.8%", "3,262"],
-    [18, "Nayarit", "29,261", "34,126", 9, "23,898", "27,265", "81.7%", "79.9%", "5,363"],
-    [21, "Puebla", "121,230", "175,240", 23, "95,616", "133,581", "78.9%", "76.2%", "25,614"],
-    [22, "Querétaro", "16,915", "24,041", 13, "14,065", "19,545", "83.2%", "81.3%", "2,850"],
-    [29, "Tlaxcala", "25,700", "45,950", 10, "22,263", "38,389", "86.6%", "83.5%", "3,437"],
-    [32, "Zacatecas", "68,413", "112,404", 15, "60,057", "100,083", "87.8%", "89.0%", "8,356"]
-]
+# # 1. Definición completa de los datos
+# data = [
+#     [9, "Ciudad de México", "4,203", "4,348", 3, "2,425", "2,490", "57.7%", "57.3%", "1,778"],
+#     [10, "Durango", "39,576", "54,298", 16, "34,500", "47,069", "87.2%", "86.7%", "5,076"],
+#     [17, "Morelos", "15,249", "18,322", 6, "11,987", "14,429", "78.6%", "78.8%", "3,262"],
+#     [18, "Nayarit", "29,261", "34,126", 9, "23,898", "27,265", "81.7%", "79.9%", "5,363"],
+#     [21, "Puebla", "121,230", "175,240", 23, "95,616", "133,581", "78.9%", "76.2%", "25,614"],
+#     [22, "Querétaro", "16,915", "24,041", 13, "14,065", "19,545", "83.2%", "81.3%", "2,850"],
+#     [29, "Tlaxcala", "25,700", "45,950", 10, "22,263", "38,389", "86.6%", "83.5%", "3,437"],
+#     [32, "Zacatecas", "68,413", "112,404", 15, "60,057", "100,083", "87.8%", "89.0%", "8,356"]
+# ]
 
-headers = [
-    "Cve", "Representación", "Meta\npersonas", "Meta\npredios", 
-    "No. de\nventanillas", "Avance\nregistro de\npersonas", 
-    "Avance\nregistro de\npredios", "% de\navance\npersonas", 
-    "% de\navance\npredios", "Personas\nNo\nactualizadas"
-]
+# headers = [
+#     "Cve", "Representación", "Meta\npersonas", "Meta\npredios", 
+#     "No. de\nventanillas", "Avance\nregistro de\npersonas", 
+#     "Avance\nregistro de\npredios", "% de\navance\npersonas", 
+#     "% de\navance\npredios", "Personas\nNo\nactualizadas"
+# ]
 
-total_row = ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
+# total_row = ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
 
-# 2. Paleta cromática por bloques de columnas (Extraída de la imagen)
-# Formato: (Color Cabecera, Color Fila Datos, Color Fila Totales)
-COLOR_COLUMNAS = [
-    (RGBColor(0, 50, 40), RGBColor(255, 255, 255), RGBColor(0, 40, 30)),      # Cve (Verde muy oscuro)
-    (RGBColor(0, 50, 40), RGBColor(255, 255, 255), RGBColor(0, 40, 30)),      # Representación
-    (RGBColor(0, 75, 60), RGBColor(245, 248, 245), RGBColor(0, 60, 45)),      # Meta personas (Verde Medio)
-    (RGBColor(10, 65, 50), RGBColor(245, 248, 245), RGBColor(0, 50, 38)),     # Meta predios
-    (RGBColor(115, 75, 40), RGBColor(253, 250, 245), RGBColor(90, 55, 25)),   # No. de ventanillas (Café)
-    (RGBColor(50, 100, 80), RGBColor(240, 247, 243), RGBColor(40, 85, 65)),   # Avance personas (Verde claro)
-    (RGBColor(45, 95, 75), RGBColor(240, 247, 243), RGBColor(35, 80, 60)),    # Avance predios
-    (RGBColor(65, 115, 90), RGBColor(242, 249, 245), RGBColor(50, 95, 75)),   # % avance personas
-    (RGBColor(55, 105, 80), RGBColor(242, 249, 245), RGBColor(42, 85, 65)),   # % avance predios
-    (RGBColor(110, 70, 35), RGBColor(252, 248, 242), RGBColor(85, 50, 20))    # No actualizadas (Marrón/Ocre)
-]
+# # 2. Paleta cromática por bloques de columnas (Extraída de la imagen)
+# # Formato: (Color Cabecera, Color Fila Datos, Color Fila Totales)
+# COLOR_COLUMNAS = [
+#     (RGBColor(0, 50, 40), RGBColor(255, 255, 255), RGBColor(0, 40, 30)),      # Cve (Verde muy oscuro)
+#     (RGBColor(0, 50, 40), RGBColor(255, 255, 255), RGBColor(0, 40, 30)),      # Representación
+#     (RGBColor(0, 75, 60), RGBColor(245, 248, 245), RGBColor(0, 60, 45)),      # Meta personas (Verde Medio)
+#     (RGBColor(10, 65, 50), RGBColor(245, 248, 245), RGBColor(0, 50, 38)),     # Meta predios
+#     (RGBColor(115, 75, 40), RGBColor(253, 250, 245), RGBColor(90, 55, 25)),   # No. de ventanillas (Café)
+#     (RGBColor(50, 100, 80), RGBColor(240, 247, 243), RGBColor(40, 85, 65)),   # Avance personas (Verde claro)
+#     (RGBColor(45, 95, 75), RGBColor(240, 247, 243), RGBColor(35, 80, 60)),    # Avance predios
+#     (RGBColor(65, 115, 90), RGBColor(242, 249, 245), RGBColor(50, 95, 75)),   # % avance personas
+#     (RGBColor(55, 105, 80), RGBColor(242, 249, 245), RGBColor(42, 85, 65)),   # % avance predios
+#     (RGBColor(110, 70, 35), RGBColor(252, 248, 242), RGBColor(85, 50, 20))    # No actualizadas (Marrón/Ocre)
+# ]
 
-TEXTO_BLANCO = RGBColor(255, 255, 255)
-TEXTO_NEGRO = RGBColor(40, 40, 40)
+# TEXTO_BLANCO = RGBColor(255, 255, 255)
+# TEXTO_NEGRO = RGBColor(40, 40, 40)
 
-# 3. Inicializar presentación (Formato 16:9)
-prs = Presentation()
-prs.slide_width = Inches(13.33)
-prs.slide_height = Inches(7.5)
-slide = prs.slides.add_slide(prs.slide_layouts)
+# # 3. Inicializar presentación (Formato 16:9)
+# prs = Presentation()
+# prs.slide_width = Inches(13.33)
+# prs.slide_height = Inches(7.5)
+# slide = prs.slides.add_slide(prs.slide_layouts)
 
-# Crear estructura de la tabla
-rows, cols = len(data) + 2, len(headers)
-left, top, width, height = Inches(0.4), Inches(1.5), Inches(12.53), Inches(4.5)
-table_shape = slide.shapes.add_table(rows, cols, left, top, width, height)
-table = table_shape.table
+# # Crear estructura de la tabla
+# rows, cols = len(data) + 2, len(headers)
+# left, top, width, height = Inches(0.4), Inches(1.5), Inches(12.53), Inches(4.5)
+# table_shape = slide.shapes.add_table(rows, cols, left, top, width, height)
+# table = table_shape.table
 
-# 4. Rellenar y dar formato dinámico por celda utilizando la paleta
-# Cabeceras (Fila 0)
-for col_idx, header in enumerate(headers):
-    cell = table.cell(0, col_idx)
-    cell.fill.solid()
-    cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de cabecera de esa columna
-    p = cell.text_frame.paragraphs
-    p.text = header
-    p.alignment = PP_ALIGN.CENTER
-    p.font.bold = True
-    p.font.size = Pt(11)
-    p.font.color.rgb = TEXTO_BLANCO
+# # 4. Rellenar y dar formato dinámico por celda utilizando la paleta
+# # Cabeceras (Fila 0)
+# for col_idx, header in enumerate(headers):
+#     cell = table.cell(0, col_idx)
+#     cell.fill.solid()
+#     cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de cabecera de esa columna
+#     p = cell.text_frame.paragraphs
+#     p.text = header
+#     p.alignment = PP_ALIGN.CENTER
+#     p.font.bold = True
+#     p.font.size = Pt(11)
+#     p.font.color.rgb = TEXTO_BLANCO
 
-# Filas de datos (Filas intermedias)
-for row_idx, row_data in enumerate(data, start=1):
-    for col_idx, val in enumerate(row_data):
-        cell = table.cell(row_idx, col_idx)
-        cell.fill.solid()
-        cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de celda de esa columna
-        p = cell.text_frame.paragraphs
-        p.text = str(val)
-        p.font.size = Pt(11)
-        p.font.color.rgb = TEXTO_NEGRO
-        p.alignment = PP_ALIGN.LEFT if col_idx == 1 else (PP_ALIGN.CENTER if col_idx == 0 or col_idx == 4 else PP_ALIGN.RIGHT)
+# # Filas de datos (Filas intermedias)
+# for row_idx, row_data in enumerate(data, start=1):
+#     for col_idx, val in enumerate(row_data):
+#         cell = table.cell(row_idx, col_idx)
+#         cell.fill.solid()
+#         cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de celda de esa columna
+#         p = cell.text_frame.paragraphs
+#         p.text = str(val)
+#         p.font.size = Pt(11)
+#         p.font.color.rgb = TEXTO_NEGRO
+#         p.alignment = PP_ALIGN.LEFT if col_idx == 1 else (PP_ALIGN.CENTER if col_idx == 0 or col_idx == 4 else PP_ALIGN.RIGHT)
 
-# Fila de Totales (Última fila)
-for col_idx, val in enumerate(total_row):
-    cell = table.cell(rows - 1, col_idx)
-    cell.fill.solid()
-    cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de total de esa columna
-    p = cell.text_frame.paragraphs
-    p.text = str(val)
-    p.font.bold = True
-    p.font.size = Pt(11)
-    p.font.color.rgb = TEXTO_BLANCO
-    p.alignment = PP_ALIGN.LEFT if col_idx == 0 else (PP_ALIGN.CENTER if col_idx == 4 else PP_ALIGN.RIGHT)
+# # Fila de Totales (Última fila)
+# for col_idx, val in enumerate(total_row):
+#     cell = table.cell(rows - 1, col_idx)
+#     cell.fill.solid()
+#     cell.fill.fore_color.rgb = COLOR_COLUMNAS[col_idx]  # Asigna color de total de esa columna
+#     p = cell.text_frame.paragraphs
+#     p.text = str(val)
+#     p.font.bold = True
+#     p.font.size = Pt(11)
+#     p.font.color.rgb = TEXTO_BLANCO
+#     p.alignment = PP_ALIGN.LEFT if col_idx == 0 else (PP_ALIGN.CENTER if col_idx == 4 else PP_ALIGN.RIGHT)
 
-# 5. Ajustar anchos específicos de columnas para que encajen de forma idéntica
-table.columns.width = Inches(0.5)   # Cve
-table.columns.width = Inches(1.7)   # Representación
-table.columns.width = Inches(1.1)   # Meta personas
-table.columns.width = Inches(1.1)   # Meta predios
-table.columns.width = Inches(1.0)   # Ventanillas
-table.columns.width = Inches(1.3)   # Avance personas
-table.columns.width = Inches(1.3)   # Avance predios
-table.columns.width = Inches(1.1)   # % personas
-table.columns.width = Inches(1.1)   # % predios
-table.columns.width = Inches(1.3)   # No actualizadas
+# # 5. Ajustar anchos específicos de columnas para que encajen de forma idéntica
+# table.columns.width = Inches(0.5)   # Cve
+# table.columns.width = Inches(1.7)   # Representación
+# table.columns.width = Inches(1.1)   # Meta personas
+# table.columns.width = Inches(1.1)   # Meta predios
+# table.columns.width = Inches(1.0)   # Ventanillas
+# table.columns.width = Inches(1.3)   # Avance personas
+# table.columns.width = Inches(1.3)   # Avance predios
+# table.columns.width = Inches(1.1)   # % personas
+# table.columns.width = Inches(1.1)   # % predios
+# table.columns.width = Inches(1.3)   # No actualizadas
 
-prs.save("Reporte_Avance_Color_Columnas.pptx")
-print("Presentación con colores por columna creada exitosamente.")
+# prs.save("Reporte_Avance_Color_Columnas.pptx")
+# print("Presentación con colores por columna creada exitosamente.")
 
 
 
@@ -613,305 +614,260 @@ print("Presentación con colores por columna creada exitosamente.")
 # prs.save("presentacion_final.pptx")
 # print("¡Presentación 'presentacion_final.pptx' creada con éxito!")
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-def crear_dona(df_dona, titulo, colores_lista=None, height=480):
-    # 1. Configuración básica de estilos
-    colores = colores_lista[:len(df_dona)] if colores_lista else plt.cm.tab10.colors
-    font = FONT_FAMILY if 'FONT_FAMILY' in globals() else 'Noto Sans'
-    color_txt = GUINDA if 'GUINDA' in globals() else '#6A1B29'
+# def crear_dona(df_dona, titulo, colores_lista=None, height=480):
+#     # 1. Configuración básica de estilos
+#     colores = colores_lista[:len(df_dona)] if colores_lista else plt.cm.tab10.colors
+#     font = FONT_FAMILY if 'FONT_FAMILY' in globals() else 'Noto Sans'
+#     color_txt = GUINDA if 'GUINDA' in globals() else '#6A1B29'
     
-    # 2. Inicializar figura limpia (sin ejes traseros)
-    fig, ax = plt.subplots(figsize=(6, height / 100), facecolor='none')
+#     # 2. Inicializar figura limpia (sin ejes traseros)
+#     fig, ax = plt.subplots(figsize=(6, height / 100), facecolor='none')
     
-    # 3. Dibujar la dona y los porcentajes internos
-    wedges, _, autotexts = ax.pie(
-        df_dona['Personas'], 
-        autopct='%1.1f%%', pctdistance=0.75, colors=colores, startangle=90,
-        wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2) # Anillo estilizado
-    )
+#     # 3. Dibujar la dona y los porcentajes internos
+#     wedges, _, autotexts = ax.pie(
+#         df_dona['Personas'], 
+#         autopct='%1.1f%%', pctdistance=0.75, colors=colores, startangle=90,
+#         wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2) # Anillo estilizado
+#     )
     
-    # Estilo rápido para los porcentajes internos
-    plt.setp(autotexts, color='white', fontfamily=font, weight='bold', size=11)
+#     # Estilo rápido para los porcentajes internos
+#     plt.setp(autotexts, color='white', fontfamily=font, weight='bold', size=11)
 
-    # 4. Texto central (Total)
-    ax.text(0, 0, f"{df_dona['Personas'].sum():,.0f}", ha='center', va='center', 
-            fontsize=20, color=color_txt, fontfamily=font, weight='bold')
+#     # 4. Texto central (Total)
+#     ax.text(0, 0, f"{df_dona['Personas'].sum():,.0f}", ha='center', va='center', 
+#             fontsize=20, color=color_txt, fontfamily=font, weight='bold')
 
-    # 5. Título y Leyenda simplificada abajo
-    ax.set_title(titulo, fontsize=16, color=color_txt, fontfamily=font, pad=15)
+#     # 5. Título y Leyenda simplificada abajo
+#     ax.set_title(titulo, fontsize=16, color=color_txt, fontfamily=font, pad=15)
     
-    ax.legend(
-        wedges, df_dona['Categoria'], 
-        loc='upper center', bbox_to_anchor=(0.5, -0.05), 
-        ncol=len(df_dona), frameon=False, prop={'family': font, 'size': 10}
-    )
-    ax.axis('equal')
-    return fig
+#     ax.legend(
+#         wedges, df_dona['Categoria'], 
+#         loc='upper center', bbox_to_anchor=(0.5, -0.05), 
+#         ncol=len(df_dona), frameon=False, prop={'family': font, 'size': 10}
+#     )
+#     ax.axis('equal')
+#     return fig
 
 
 
-from datetime import datetime
-from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
-from pptx.enum.shapes import MSO_SHAPE
+# from datetime import datetime
+# from pptx import Presentation
+# from pptx.util import Inches, Pt
+# from pptx.dml.color import RGBColor
+# from pptx.enum.text import PP_ALIGN
+# from pptx.enum.shapes import MSO_SHAPE
 
-# 1. Inicializar la presentación
-prs = Presentation("plantilla 2026.pptx")
+# # 1. Inicializar la presentación
+# prs = Presentation("plantilla 2026.pptx")
 
-# --- DIAPOSITIVA 1: TÍTULO ---
-# Usar el diseño de portada predeterminado (índice 0)
-slide1 = prs.slides.add_slide(prs.slide_layouts[0])
+# # --- DIAPOSITIVA 1: TÍTULO ---
+# # Usar el diseño de portada predeterminado (índice 0)
+# slide1 = prs.slides.add_slide(prs.slide_layouts[0])
 
-# 🚀 FUNCIÓN MÁGICA: Pone texto en coordenadas con formato personalizado
-# Ahora agregamos "ancho=5" al final de la primera línea (por defecto será de 5 pulgadas)
-def agregar_texto(slide, x=1, y=1, texto="", fuente="Noto Sans", tamano=14, negrita=True, color=(0,0,0), ancho=10):
-    box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(ancho), Inches(0.5))
-    tf = box.text_frame
-    tf.word_wrap = True # IMPORTANTE: Si el texto supera el 'ancho', saltará de línea
-    p = tf.paragraphs[0]
-    p.text = texto
-    p.font.name = fuente
-    p.font.size = Pt(tamano)
-    p.font.bold = negrita
-    p.font.color.rgb = RGBColor(*color) if isinstance(color, tuple) else RGBColor(0, 0, 0)  # Soporta tuplas RGB o nombres de color
+# # 🚀 FUNCIÓN MÁGICA: Pone texto en coordenadas con formato personalizado
+# # Ahora agregamos "ancho=5" al final de la primera línea (por defecto será de 5 pulgadas)
+# def agregar_texto(slide, x=1, y=1, texto="", fuente="Noto Sans", tamano=14, negrita=True, color=(0,0,0), ancho=10):
+#     box = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(ancho), Inches(0.5))
+#     tf = box.text_frame
+#     tf.word_wrap = True # IMPORTANTE: Si el texto supera el 'ancho', saltará de línea
+#     p = tf.paragraphs[0]
+#     p.text = texto
+#     p.font.name = fuente
+#     p.font.size = Pt(tamano)
+#     p.font.bold = negrita
+#     p.font.color.rgb = RGBColor(*color) if isinstance(color, tuple) else RGBColor(0, 0, 0)  # Soporta tuplas RGB o nombres de color
     
-    # ... (aquí va el resto de tu código del procesador de color) ...
+#     # ... (aquí va el resto de tu código del procesador de color) ...
 
-# 📍 EJEMPLOS DE USO EN UNA SOLA LÍNEA
-# Parámetros: (slide, X, Y, "Texto", "Fuente", Tamaño, Negrita, (R,G,B))
+# # 📍 EJEMPLOS DE USO EN UNA SOLA LÍNEA
+# # Parámetros: (slide, X, Y, "Texto", "Fuente", Tamaño, Negrita, (R,G,B))
 
-# Asignar textos
-slide1.shapes.title.text = "Producción para el Bienestar"
-slide1.placeholders[1].text = "Actualización o Corroboración de Datos e Integración de Expedientes - 2026"
-agregar_texto(slide1, 10.5, 6.5, f"Fecha: {datetime.now().strftime('%d-%m-%Y')}",tamano=16, color = (255, 255, 255), ancho=2.5)   # Rojo
+# # Asignar textos
+# slide1.shapes.title.text = "Producción para el Bienestar"
+# slide1.placeholders[1].text = "Actualización o Corroboración de Datos e Integración de Expedientes - 2026"
+# agregar_texto(slide1, 10.5, 6.5, f"Fecha: {datetime.now().strftime('%d-%m-%Y')}",tamano=16, color = (255, 255, 255), ancho=2.5)   # Rojo
 
-# --- DIAPOSITIVA 2: CONTENIDO ---
-# Usar diseño de título y cuerpo (índice 1)
-slide_layout_content = prs.slide_layouts[3]
-slide2 = prs.slides.add_slide(slide_layout_content)
+# # --- DIAPOSITIVA 2: CONTENIDO ---
+# # Usar diseño de título y cuerpo (índice 1)
+# slide_layout_content = prs.slide_layouts[3]
+# slide2 = prs.slides.add_slide(slide_layout_content)
 
-# Título de la segunda diapositiva
-slide2.shapes.title.text = "Resultados del Trimestre"
+# # Título de la segunda diapositiva
+# slide2.shapes.title.text = "Resultados del Trimestre"
 
-# Añadir un cuadro de texto personalizado
-left = Inches(1)
-top = Inches(2.5)
-width = Inches(8)
-height = Inches(4)
+# # Añadir un cuadro de texto personalizado
+# left = Inches(1)
+# top = Inches(2.5)
+# width = Inches(8)
+# height = Inches(4)
 
-txBox = slide2.shapes.add_textbox(left, top, width, height)
-tf = txBox.text_frame
-tf.text = "Este es el párrafo principal del reporte."
+# txBox = slide2.shapes.add_textbox(left, top, width, height)
+# tf = txBox.text_frame
+# tf.text = "Este es el párrafo principal del reporte."
 
-# Añadir un párrafo secundario con formato
-p = tf.add_paragraph()
-p.text = "• Incremento del 15% en ventas masivas."
-p.font.bold = True
-p.font.size = Pt(18)
+# # Añadir un párrafo secundario con formato
+# p = tf.add_paragraph()
+# p.text = "• Incremento del 15% en ventas masivas."
+# p.font.bold = True
+# p.font.size = Pt(18)
 
 
 
-# 1. Definir los datos de la tabla (Encabezados + Contenido + Totales)
-datos = [
-    ["Cve", "Representación", "Meta personas", "Meta predios", "No. de ventanillas", "Avance registro de personas", "Avance registro de predios", "% de avance personas", "% de avance predios", "Personas No actualizadas"],
-    ["9", "Ciudad de México", "4,203", "4,348", "3", "2,425", "2,490", "57.7%", "57.3%", "1,778"],
-    ["10", "Durango", "39,576", "54,298", "16", "34,500", "47,069", "87.2%", "86.7%", "5,076"],
-    ["17", "Morelos", "15,249", "18,322", "6", "11,987", "14,429", "78.6%", "78.8%", "3,262"],
-    ["18", "Nayarit", "29,261", "34,126", "9", "23,888", "27,265", "81.7%", "79.9%", "5,363"],
-    ["21", "Puebla", "121,230", "175,240", "23", "95,616", "133,581", "78.9%", "76.2%", "25,614"],
-    ["22", "Querétaro", "16,915", "24,041", "13", "14,065", "19,545", "83.2%", "81.3%", "2,850"],
-    ["29", "Tlaxcala", "25,700", "45,950", "10", "22,263", "38,389", "86.6%", "83.5%", "3,437"],
-    ["32", "Zacatecas", "68,413", "112,404", "15", "60,057", "100,083", "87.8%", "89.0%", "8,356"],
-    ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
-]
+# # 1. Definir los datos de la tabla (Encabezados + Contenido + Totales)
+# datos = [
+#     ["Cve", "Representación", "Meta personas", "Meta predios", "No. de ventanillas", "Avance registro de personas", "Avance registro de predios", "% de avance personas", "% de avance predios", "Personas No actualizadas"],
+#     ["9", "Ciudad de México", "4,203", "4,348", "3", "2,425", "2,490", "57.7%", "57.3%", "1,778"],
+#     ["10", "Durango", "39,576", "54,298", "16", "34,500", "47,069", "87.2%", "86.7%", "5,076"],
+#     ["17", "Morelos", "15,249", "18,322", "6", "11,987", "14,429", "78.6%", "78.8%", "3,262"],
+#     ["18", "Nayarit", "29,261", "34,126", "9", "23,888", "27,265", "81.7%", "79.9%", "5,363"],
+#     ["21", "Puebla", "121,230", "175,240", "23", "95,616", "133,581", "78.9%", "76.2%", "25,614"],
+#     ["22", "Querétaro", "16,915", "24,041", "13", "14,065", "19,545", "83.2%", "81.3%", "2,850"],
+#     ["29", "Tlaxcala", "25,700", "45,950", "10", "22,263", "38,389", "86.6%", "83.5%", "3,437"],
+#     ["32", "Zacatecas", "68,413", "112,404", "15", "60,057", "100,083", "87.8%", "89.0%", "8,356"],
+#     ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
+# ]
 
-# 2. Configurar dimensiones y posición de la tabla
-filas = len(datos)
-columnas = len(datos[0])
+# # 2. Configurar dimensiones y posición de la tabla
+# filas = len(datos)
+# columnas = len(datos[0])
 
-x = Inches(0.5)      # Posición izquierda
-y = Inches(1.5)      # Posición superior
-ancho = Inches(12)   # Ancho total de la tabla (ajustado para pantallas panorámicas 16:9)
-alto = Inches(4.5)   # Alto total estimado de la tabla
+# x = Inches(0.5)      # Posición izquierda
+# y = Inches(1.5)      # Posición superior
+# ancho = Inches(12)   # Ancho total de la tabla (ajustado para pantallas panorámicas 16:9)
+# alto = Inches(4.5)   # Alto total estimado de la tabla
 
-# 3. Insertar la tabla en la diapositiva
-shape = slide2.shapes.add_table(filas, columnas, x, y, ancho, alto)
-table = shape.table
+# # 3. Insertar la tabla en la diapositiva
+# shape = slide2.shapes.add_table(filas, columnas, x, y, ancho, alto)
+# table = shape.table
 
-# 4. Ajustar anchos específicos de columnas (Opcional, para que se vea ordenado)
-table.columns[0].width = Inches(0.5)  # Columna Cve más angosta
-table.columns[1].width = Inches(2.0)  # Columna Representación más ancha
+# # 4. Ajustar anchos específicos de columnas (Opcional, para que se vea ordenado)
+# table.columns[0].width = Inches(0.5)  # Columna Cve más angosta
+# table.columns[1].width = Inches(2.0)  # Columna Representación más ancha
 
-# 1. Datos exactos de tu imagen
-datos = [
-    ["Cve", "Representación", "Meta personas", "Meta predios", "No. de ventanillas", "Avance registro de personas", "Avance registro de predios", "% de avance personas", "% de avance predios", "Personas No actualizadas"],
-    ["9", "Ciudad de México", "4,203", "4,348", "3", "2,425", "2,490", "57.7%", "57.3%", "1,778"],
-    ["10", "Durango", "39,576", "54,298", "16", "34,500", "47,069", "87.2%", "86.7%", "5,076"],
-    ["17", "Morelos", "15,249", "18,322", "6", "11,987", "14,429", "78.6%", "78.8%", "3,262"],
-    ["18", "Nayarit", "29,261", "34,126", "9", "23,898", "27,265", "81.7%", "79.9%", "5,363"],
-    ["21", "Puebla", "121,230", "175,240", "23", "95,616", "133,581", "78.9%", "76.2%", "25,614"],
-    ["22", "Querétaro", "16,915", "24,041", "13", "14,065", "19,545", "83.2%", "81.3%", "2,850"],
-    ["29", "Tlaxcala", "25,700", "45,950", "10", "22,263", "38,389", "86.6%", "83.5%", "3,437"],
-    ["32", "Zacatecas", "68,413", "112,404", "15", "60,057", "100,083", "87.8%", "89.0%", "8,356"],
-    ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
-]
+# # 1. Datos exactos de tu imagen
+# datos = [
+#     ["Cve", "Representación", "Meta personas", "Meta predios", "No. de ventanillas", "Avance registro de personas", "Avance registro de predios", "% de avance personas", "% de avance predios", "Personas No actualizadas"],
+#     ["9", "Ciudad de México", "4,203", "4,348", "3", "2,425", "2,490", "57.7%", "57.3%", "1,778"],
+#     ["10", "Durango", "39,576", "54,298", "16", "34,500", "47,069", "87.2%", "86.7%", "5,076"],
+#     ["17", "Morelos", "15,249", "18,322", "6", "11,987", "14,429", "78.6%", "78.8%", "3,262"],
+#     ["18", "Nayarit", "29,261", "34,126", "9", "23,898", "27,265", "81.7%", "79.9%", "5,363"],
+#     ["21", "Puebla", "121,230", "175,240", "23", "95,616", "133,581", "78.9%", "76.2%", "25,614"],
+#     ["22", "Querétaro", "16,915", "24,041", "13", "14,065", "19,545", "83.2%", "81.3%", "2,850"],
+#     ["29", "Tlaxcala", "25,700", "45,950", "10", "22,263", "38,389", "86.6%", "83.5%", "3,437"],
+#     ["32", "Zacatecas", "68,413", "112,404", "15", "60,057", "100,083", "87.8%", "89.0%", "8,356"],
+#     ["Total", "", "320,547", "468,729", "95", "264,811", "382,851", "82.6%", "81.7%", "55,736"]
+# ]
 
-# 2. Crear tabla (10 filas x 10 columnas) en coordenadas (X=0.5, Y=1.5, Ancho=12, Alto=4.5)
-tabla = slide2.shapes.add_table(10, 10, Inches(0.5), Inches(1.5), Inches(12), Inches(4.5)).table
+# # 2. Crear tabla (10 filas x 10 columnas) en coordenadas (X=0.5, Y=1.5, Ancho=12, Alto=4.5)
+# tabla = slide2.shapes.add_table(10, 10, Inches(0.5), Inches(1.5), Inches(12), Inches(4.5)).table
 
-# 3. Rellenar de forma masiva y compacta
-for f_idx, fila in enumerate(datos):
-    for c_idx, valor in enumerate(fila):
-        tabla.cell(f_idx, c_idx).text = valor
+# # 3. Rellenar de forma masiva y compacta
+# for f_idx, fila in enumerate(datos):
+#     for c_idx, valor in enumerate(fila):
+#         tabla.cell(f_idx, c_idx).text = valor
 
-# 🚀 FUNCIÓN MÁGICA: Crea una fila de tarjetas con encabezado y viñetas
-def crear_bloques_horizontales(slide, x_ini, y_ini, datos, color_header=(166, 30, 77), ancho_bloque=2.8):
-    alto_tit = 0.6
-    alto_body = 2.5
-    separacion = 0.3
+# # 🚀 FUNCIÓN MÁGICA: Crea una fila de tarjetas con encabezado y viñetas
+# def crear_bloques_horizontales(slide, x_ini, y_ini, datos, color_header=(166, 30, 77), ancho_bloque=2.8):
+#     alto_tit = 0.6
+#     alto_body = 2.5
+#     separacion = 0.3
     
-    for i, (titulo, vinetas) in enumerate(datos):
-        # 📐 Calcular posición horizontal dinámica
-        x = Inches(x_ini + i * (ancho_bloque + separacion))
+#     for i, (titulo, vinetas) in enumerate(datos):
+#         # 📐 Calcular posición horizontal dinámica
+#         x = Inches(x_ini + i * (ancho_bloque + separacion))
         
-        # 🟥 1. Crear el Encabezado
-        b_tit = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(y_ini), Inches(ancho_bloque), Inches(alto_tit))
-        b_tit.fill.solid()
-        b_tit.fill.fore_color.rgb = RGBColor(*color_header)
-        b_tit.line.fill.background() # Quita el borde
-        b_tit.text_frame.text = titulo
-        b_tit.text_frame.paragraphs[0].font.size = Pt(12)
-        b_tit.text_frame.paragraphs[0].font.bold = True
-        b_tit.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
+#         # 🟥 1. Crear el Encabezado
+#         b_tit = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(y_ini), Inches(ancho_bloque), Inches(alto_tit))
+#         b_tit.fill.solid()
+#         b_tit.fill.fore_color.rgb = RGBColor(*color_header)
+#         b_tit.line.fill.background() # Quita el borde
+#         b_tit.text_frame.text = titulo
+#         b_tit.text_frame.paragraphs[0].font.size = Pt(12)
+#         b_tit.text_frame.paragraphs[0].font.bold = True
+#         b_tit.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
         
-        # ⬜ 2. Crear el Cuerpo Gris
-        b_body = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(y_ini + alto_tit), Inches(ancho_bloque), Inches(alto_body))
-        b_body.fill.solid()
-        b_body.fill.fore_color.rgb = RGBColor(240, 242, 245)
-        b_body.line.color.rgb = RGBColor(200, 200, 200) # Borde gris claro
+#         # ⬜ 2. Crear el Cuerpo Gris
+#         b_body = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, x, Inches(y_ini + alto_tit), Inches(ancho_bloque), Inches(alto_body))
+#         b_body.fill.solid()
+#         b_body.fill.fore_color.rgb = RGBColor(240, 242, 245)
+#         b_body.line.color.rgb = RGBColor(200, 200, 200) # Borde gris claro
         
-        tf = b_body.text_frame
-        tf.word_wrap = True
+#         tf = b_body.text_frame
+#         tf.word_wrap = True
         
-        # 📑 3. Inyectar las viñetas
-        for j, texto in enumerate(vinetas):
-            p = tf.paragraphs[0] if j == 0 else tf.add_paragraph()
-            p.text = f"• {texto}"
-            p.font.size = Pt(11)
-            p.font.color.rgb = RGBColor(30, 30, 30)
+#         # 📑 3. Inyectar las viñetas
+#         for j, texto in enumerate(vinetas):
+#             p = tf.paragraphs[0] if j == 0 else tf.add_paragraph()
+#             p.text = f"• {texto}"
+#             p.font.size = Pt(11)
+#             p.font.color.rgb = RGBColor(30, 30, 30)
 
-# ==========================================================
-# 📍 CONFIGURACIÓN DE TUS DATOS (Estructura limpia)
-# ==========================================================
-informacion = [
-    ["Constancia de Posesión", ["7% de los productores actualizados, presentaron constancias"]],
-    ["RENTA", ["El 13.6% presentó documento de RENTA.", "Ahora se conoce la fecha."]],
-    ["Documentos", ["0.4% presentó documentos no válidos.", "99.6% presentó papeles aceptables."]],
-    ["Género", ["El 35.2% son mujeres.", "El 64.8% son hombres."]]
-]
+# # ==========================================================
+# # 📍 CONFIGURACIÓN DE TUS DATOS (Estructura limpia)
+# # ==========================================================
+# informacion = [
+#     ["Constancia de Posesión", ["7% de los productores actualizados, presentaron constancias"]],
+#     ["RENTA", ["El 13.6% presentó documento de RENTA.", "Ahora se conoce la fecha."]],
+#     ["Documentos", ["0.4% presentó documentos no válidos.", "99.6% presentó papeles aceptables."]],
+#     ["Género", ["El 35.2% son mujeres.", "El 64.8% son hombres."]]
+# ]
 
-# 🎯 INVOCACIÓN EN UNA SOLA LÍNEA
-# Parámetros: (slide, X_inicial, Y_inicial, datos, color_rgb_opcional)
-crear_bloques_horizontales(slide1, 0.5, 2.0, informacion)
-
-
+# # 🎯 INVOCACIÓN EN UNA SOLA LÍNEA
+# # Parámetros: (slide, X_inicial, Y_inicial, datos, color_rgb_opcional)
+# crear_bloques_horizontales(slide1, 0.5, 2.0, informacion)
 
 
-# 3. Guardar el archivo
-prs.save("presentacion_python.pptx")
-print("¡Presentación creada con éxito!")
 
 
-import io
-import plotly.graph_objects as go
-from pptx import Presentation
-from pptx.util import Inches
+# # 3. Guardar el archivo
+# prs.save("presentacion_python.pptx")
+# print("¡Presentación creada con éxito!")
 
-# 1. Crear una figura muy simple con Plotly
-fig = go.Figure(
-    data=[go.Bar(x=['A', 'B', 'C'], y=[10, 20, 15], marker_color='#6A1B29')],
-    layout=go.Layout(
-        title="Gráfico de Ejemplo",
-        width=500,
-        height=400,
-        paper_bgcolor="rgba(0,0,0,0)", # Fondo transparente
-        plot_bgcolor="rgba(0,0,0,0)"
-    )
-)
 
-# 2. Exportar el gráfico a un buffer de memoria usando Kaleido
-image_stream = io.BytesIO()
-fig.write_image(image_stream, format="png", scale=2)
-image_stream.seek(0)
 
-# 3. Configurar PowerPoint e insertar la imagen en la diapositiva 1
-prs = Presentation()
-slide1 = prs.slides.add_slide(prs.slide_layouts[0]) # Usando tu diseño slide_layouts[0]
 
-# Posición en la diapositiva (en pulgadas)
-left = Inches(1.5)
-top = Inches(2.5)
-width = Inches(7.0)
 
-# Insertar la imagen directamente desde la memoria
-slide1.shapes.add_picture(image_stream, left, top, width=width)
+# import io
+# import plotly.graph_objects as go
+# from pptx import Presentation
+# from pptx.util import Inches
 
-# 4. Guardar la presentación
-prs.save("presentacion_plotly.pptx")
-print("¡Presentación creada con éxito junto con el gráfico de Plotly!")
+# # 1. Crear una figura muy simple con Plotly
+# fig = go.Figure(
+#     data=[go.Bar(x=['A', 'B', 'C'], y=[10, 20, 15], marker_color='#6A1B29')],
+#     layout=go.Layout(
+#         title="Gráfico de Ejemplo",
+#         width=500,
+#         height=400,
+#         paper_bgcolor="rgba(0,0,0,0)", # Fondo transparente
+#         plot_bgcolor="rgba(0,0,0,0)"
+#     )
+# )
 
-import io
-import plotly.graph_objects as go
-import plotly.io as pio
-from pptx import Presentation
-from pptx.util import Inches
+# # 2. Exportar el gráfico a un buffer de memoria usando Kaleido
+# image_stream = io.BytesIO()
+# fig.write_image(image_stream, format="png", scale=2)
+# image_stream.seek(0)
 
-# 1. Supongamos que tienes una lista de diccionarios con tus datos
-datos_reporte = [
-    {"titulo": "Ventas Región Norte", "categorias": ['A', 'B', 'C'], "valores": [10, 20, 15]},
-    {"titulo": "Ventas Región Sur", "categorias": ['D', 'E', 'F'], "valores": [30, 12, 45]},
-    {"titulo": "Ventas Región Centro", "categorias": ['G', 'H', 'I'], "valores": [25, 18, 22]}
-]
+# # 3. Configurar PowerPoint e insertar la imagen en la diapositiva 1
+# prs = Presentation()
+# slide1 = prs.slides.add_slide(prs.slide_layouts[0]) # Usando tu diseño slide_layouts[0]
 
-# 2. Inicializar la presentación una sola vez antes del bucle
-prs = Presentation()
-diseño_diapositiva = prs.slide_layouts[5] # Diseño típico con título arriba y espacio blanco abajo
+# # Posición en la diapositiva (en pulgadas)
+# left = Inches(1.5)
+# top = Inches(2.5)
+# width = Inches(7.0)
 
-# 3. Bucle para generar los gráficos e insertarlos
-for data in datos_reporte:
-    # Crear la figura de Plotly para esta iteración
-    fig = go.Figure(
-        data=[go.Bar(x=data["categorias"], y=data["valores"], marker_color='#6A1B29')],
-        layout=go.Layout(
-            title=data["titulo"],
-            width=600, height=450,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)"
-        )
-    )
-    
-    # Agregar una nueva diapositiva para este gráfico
-    nueva_slide = prs.slides.add_slide(diseño_diapositiva)
-    
-    # Exportar a memoria e insertar (El 'with' libera la memoria al terminar cada vuelta)
-    with io.BytesIO() as image_stream:
-        fig.write_image(image_stream, format="png", scale=2)
-        image_stream.seek(0)
-        
-        # Insertar en la diapositiva actual
-        nueva_slide.shapes.add_picture(
-            image_stream, 
-            left=Inches(1.5), 
-            top=Inches(2.0), 
-            width=Inches(7.0)
-        )
-    
-    print(f"Diapositiva '{data['titulo']}' procesada con éxito.")
+# # Insertar la imagen directamente desde la memoria
+# slide1.shapes.add_picture(image_stream, left, top, width=width)
 
-# 4. Guardar el archivo final al salir del bucle
-prs.save("reporte_mensual_automatizado.pptx")
+# # 4. Guardar la presentación
+# prs.save("presentacion_plotly.pptx")
+# print("¡Presentación creada con éxito junto con el gráfico de Plotly!")
 
-print("\n¡Presentación completa generada y memoria 100% liberada!")
+
+####################################################################################################################################
+####################################################################################################################################
+

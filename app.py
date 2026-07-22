@@ -1,38 +1,39 @@
-from login import login_page
-from dashboard import dashboard_page
-
 import streamlit as st
-# import base64
-# import plotly.express as px
-# import plotly.graph_objects as go
-# import pandas as pd
-# import numpy as np
-# import polars as pl
-# import datetime
-# from datetime import date
-# import json
+import streamlit_authenticator as stauth
+from login import get_authenticator
 
-# ═══════════════════════════════════════════════════════════════════════════════
+authenticator = get_authenticator()
+st.session_state.authenticator = authenticator
+
 # CONFIGURACIÓN INICIAL
 # ═══════════════════════════════════════════════════════════════════════════════
-# st.set_page_config(
-#     page_title="PROBIEN",
-#     page_icon="🌽",
-#     layout="wide"
-# )
+if st.session_state.get("authentication_status"):
+    st.set_page_config(page_title="PROBIEN",page_icon="🌽",layout="wide")
+else:
+    st.set_page_config(page_title="PROBIEN",page_icon="🌽",layout="centered")
 
-# --- Control de flujo principal ---
-def main():
-    # Inicializar estado de sesión
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
+try:
+    authenticator.login(location='main',
+            fields={
+            'Form name': 'Iniciar sesión', # Título del formulario
+            'Username': 'Usuario',# Texto sobre el campo de usuario
+            'Password': 'Contraseña',# Texto sobre el campo de contraseña
+            'Login': 'Entrar'# Texto del botón de envío
+        }
+    )
 
-    # Mostrar página según autenticación
-    if st.session_state["authenticated"]:
-        dashboard_page()
-    else:
-        login_page()
+except Exception as e:
+    st.error(str(e))
+    st.stop()
 
+dashboard_page = st.Page("dashboard.py", title="Dashboard", icon="📊",default=True)
 
-if __name__ == "__main__":
-    main()
+if st.session_state.get("authentication_status"):
+    st.navigation([dashboard_page]).run()
+
+elif st.session_state.get("authentication_status") is False:
+    st.error("❌ Usuario o contraseña incorrectos")
+
+elif st.session_state.get("authentication_status") is None:
+    st.info("🔐 Bienvenido al panel de seguimiento")
+

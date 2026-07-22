@@ -1,1345 +1,1349 @@
 import streamlit as st
-import base64
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import polars as pl
+import base64
 import datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from babel.dates import format_date
 from datetime import date
 import json
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN INICIAL
 # ═══════════════════════════════════════════════════════════════════════════════
+if st.session_state.get("authentication_status"):
+    st.set_page_config(page_title="PROBIEN",page_icon="🌽",layout="wide")
 
-def dashboard_page():
-    st.set_page_config(
-    page_title="PROBIEN",
-    page_icon="🌽",
-    layout="wide")
+else:
+    st.set_page_config(page_title="PROBIEN",page_icon="🌽",layout="centered")
 
-    if st.session_state.get("authenticated")==True:
-        st.toast(f"- {st.session_state['username']}", icon="👋")
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cerrar sesión
+# ═══════════════════════════════════════════════════════════════════════════════
+with st.sidebar:
+    authenticator = st.session_state.authenticator
+    st.markdown(f"""<span style="font-size: 18px;"> Hola, {st.session_state.get("name").title() if "name" in st.session_state else "Invitado"} </span>""", unsafe_allow_html=True)
 
-    # Colores institucionales
-    GUINDA = "#621132"
-    GUINDA_CLARO = "#9F2241"
-    DORADO = "#D4C19C"
-    VERDE = "#285C4D"
-    AMARILLO = "#745526"
-    VERDE_CLARO = "#3A7D6B"
-    CREMA = "#F5F1EB"
-
-    # Paleta institucional
-    PALETA_INSTITUCIONAL = ["#10312B", "#691C32", "#D4C19C", "#235B4E", "#9F2241", "#44546A", "#52492E", "#52492E", "#C29E5C", "#f8f4ed"]
-    CREMA = "#f8f4ed"
-    # Fuente institucional
-    FONT_FAMILY = "Noto Sans"
-    FONT_SIZE_AXIS = 18
-    FONT_SIZE_TITLE = 18
-
-    # Mapeo de nombres: DataFrame (MAYÚSCULAS) → GeoJSON (Title Case)
-    MAPEO_ESTADOS = {
-        "AGUASCALIENTES": "Aguascalientes",
-        "BAJA CALIFORNIA": "Baja California",
-        "BAJA CALIFORNIA SUR": "Baja California Sur",
-        "CAMPECHE": "Campeche",
-        "CHIAPAS": "Chiapas",
-        "CHIHUAHUA": "Chihuahua",
-        "CIUDAD DE MEXICO": "Ciudad de México",
-        "COAHUILA DE ZARAGOZA": "Coahuila de Zaragoza",
-        "COLIMA": "Colima",
-        "DURANGO": "Durango",
-        "GUANAJUATO": "Guanajuato",
-        "GUERRERO": "Guerrero",
-        "HIDALGO": "Hidalgo",
-        "JALISCO": "Jalisco",
-        "MEXICO": "México",
-        "MICHOACAN DE OCAMPO": "Michoacán de Ocampo",
-        "MORELOS": "Morelos",
-        "NAYARIT": "Nayarit",
-        "NUEVO LEON": "Nuevo León",
-        "OAXACA": "Oaxaca",
-        "PUEBLA": "Puebla",
-        "QUERETARO": "Querétaro",
-        "QUERETARO DE ARTEAGA": "Querétaro",
-        "QUINTANA ROO": "Quintana Roo",
-        "SAN LUIS POTOSI": "San Luis Potosí",
-        "SINALOA": "Sinaloa",
-        "SONORA": "Sonora",
-        "TABASCO": "Tabasco",
-        "TAMAULIPAS": "Tamaulipas",
-        "TLAXCALA": "Tlaxcala",
-        "VERACRUZ DE IGNACIO DE LA LLAVE": "Veracruz de Ignacio de la Llave",
-        "VERACRUZ": "Veracruz de Ignacio de la Llave",
-        "YUCATAN": "Yucatán",
-        "ZACATECAS": "Zacatecas",
-    }
+    authenticator.logout("Cerrar sesión", "sidebar")
+    if st.session_state.get("authentication_status") is None:
+        st.stop()
+        st.rerun()
 
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # FUNCIONES AUXILIARES
-    # ═══════════════════════════════════════════════════════════════════════════════
+# Colores institucionales
+GUINDA = "#621132"
+GUINDA_CLARO = "#9F2241"
+DORADO = "#D4C19C"
+VERDE = "#285C4D"
+AMARILLO = "#745526"
+VERDE_CLARO = "#3A7D6B"
+CREMA = "#F5F1EB"
 
-    # Función para que Streamlit acepte tus logos locales
-    def img_to_b64(path):
-        with open(path, "rb") as f:
-            return f"data:image/png;base64,{base64.b64encode(f.read()).decode()}"
+# Paleta institucional
+PALETA_INSTITUCIONAL = ["#10312B", "#691C32", "#C29E5C", "#235B4E", "#9F2241", "#D4C19C", "#44546A", "#52492E", "#52492E", "#f8f4ed"]
+CREMA = "#f8f4ed"
+# Fuente institucional
+FONT_FAMILY = "Noto Sans"
+FONT_SIZE_AXIS = 20
+FONT_SIZE_TITLE = 22
 
-    # Convertimos tus logos
-    l1, l2, l3 = img_to_b64("logo1.png"), img_to_b64("logo2.png"), img_to_b64("logo3.png")
+# ═══════════════════════════════════════════════════════════════════════════════
+# FUNCIONES AUXILIARES
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    # Inyectamos TU código adaptado (sin html/head/body para no romper Streamlit)
-    st.markdown(f"""
-        <style>
-            /* Ajuste para que Streamlit use TODO el ancho de tu pantalla */
-            [data-testid="stAppViewBlockContainer"] {{
-                max-width: 100% !important;
-                padding: 5 !important;
-            }}
-            
-            /* AQUÍ VA TU CSS ORIGINAL */
-            .header-logos {{
-                width: 100%;
-                display: flex;
-                justify-content: flex-end; /* Lo movemos a la derecha como pediste */
-                align-items: center;
-                padding: 5px;
-                gap: 10px;
-            }}
+# Función para que Streamlit acepte tus logos locales
+def img_to_b64(path):
+    with open(path, "rb") as f:
+        return f"data:image/png;base64,{base64.b64encode(f.read()).decode()}"
 
-            .logo {{
-                width: 30%; /* Ajusta el % para el tamaño responsivo */
-                height: auto;
-                object-fit: contain;
-            }}
-
-            h1, h3 {{ 
-                font-family: 'Noto Sans', sans-serif; 
-                text-align: left; /* Títulos alineados a la derecha */
-                color: #333;
-            }}
-        </style>
-
-        <header class="header-logos">
-            <img src="{l1}" class="logo" style="max-width: 300px;">
-            <img src="{l2}" class="logo" style="max-width: 250px;"> 
-            <img src="{l3}" class="logo" style="max-width: 150px;"> 
-        </header>
-
-        <!-- 
-        <h1>Producción para el Bienestar (PROBIEN) 2026</h1>
-        <h3>Proceso de Actualización</h3>
-        -->
-
-    """, unsafe_allow_html=True)
+# Convertimos tus logos
+l1, l2, l3 = img_to_b64("logo1.png"), img_to_b64("logo2.png"), img_to_b64("logo3.png")
 
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TÍTULO Y FECHA
-    # ═══════════════════════════════════════════════════════════════════════════════
-
-    hoy = date.today().strftime("%d-%m-%Y")
-
-    st.markdown(f"""
-        <div style="line-height: 1;">
-            <h3 style="margin-bottom: 0;">Proceso de Actualización</h3>
-            <p style="font-size: 1.2em; color: {AMARILLO}; margin-top: 0px; font-weight: bold;">
-                Fecha del reporte: <span style="color: {VERDE}; font-weight: bold;">{hoy}</span> 
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-
-
-    @st.cache_data
-    def cargar_geojson(ruta):
-        with open(ruta, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-    def crear_barras(df_barras, titulo, colores_lista=None, height=480):
-        if colores_lista is None:
-            colores_lista = PALETA_INSTITUCIONAL
-
-        # Ajusta los colores según la cantidad de categorías
-        colores = colores_lista[:len(df_barras)]
-
-        # df_barras = df_barras.copy() # Evita modificar el DataFrame original fuera de la función
+# Inyectamos TU código adaptado (sin html/head/body para no romper Streamlit)
+st.markdown(f"""
+    <style>
+        /* Ajuste para que Streamlit use TODO el ancho de tu pantalla */
+        [data-testid="stAppViewBlockContainer"] {{
+            max-width: 100% !important;
+            padding: 5 !important;
+        }}
         
-        # # Mantiene la misma lógica de etiquetas con porcentaje
-        # df_barras['Categoria_Etiqueta'] = df_barras.apply(
-        #     lambda r: f"<b>{r['Categoria']}</b> <br>({r['Personas'] / df_barras['Personas'].sum() * 100:.2f}%)", axis=1
-        # )
-        
-        # Creación del gráfico de barras
-        fig = px.bar(
-            df_barras,
-            x="Categoria",
-            y="Personas",
-            color="Categoria", # Permite aplicar la secuencia de colores por categoría
-            color_discrete_sequence=colores,
-        )
+        /* AQUÍ VA TU CSS ORIGINAL */
+        .header-logos {{
+            width: 100%;
+            display: flex;
+            justify-content: flex-end; /* Lo movemos a la derecha como pediste */
+            align-items: center;
+            padding: 5px;
+            gap: 10px;
+        }}
 
-        # Configuración de los trazos (barras)
-        fig.update_traces(
-            texttemplate='%{y:,.0f}', # Muestra el valor absoluto sobre/dentro de la barra
-            textposition='outside', # Coloca el texto afuera para mejor lectura
-            textfont=dict(size=18, family="Noto Sans Black", color=VERDE),
-            cliponaxis=False, # Permite que las etiquetas se muestren incluso si salen del área del gráfico
-            textangle=-45, 
-            hovertemplate=(
-                "<b>%{x}</b>:<br>"          # Categoría y porcentaje
-                "%{y:,.0f}<br>"     # Valor absoluto
-                "<extra></extra>"
-            ),
-            marker=dict(line=dict(color='white', width=1)),
-        )
+        .logo {{
+            width: 30%; /* Ajusta el % para el tamaño responsivo */
+            height: auto;
+            object-fit: contain;
+        }}
 
-        # Configuración del diseño global
-        fig.update_layout(
-            hoverlabel=dict(
-                font_size=18, font_family=FONT_FAMILY,
-                bgcolor="white", font_color=VERDE, bordercolor=DORADO
-            ),
-            title=dict(
-                text=titulo,
-                font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY),
-                x=0.5, xanchor="center"
-            ),
-            legend=dict(
-                font=dict(size=18, family=FONT_FAMILY),
-                orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5,
-                title=None # Elimina el título automático de la leyenda
-            ),
-            xaxis=dict(
-                title=None, # Quita el título del eje X porque la etiqueta es clara
-                tickfont=dict(size=14, family=FONT_FAMILY, color="Black"),
-                tickangle=-45
-            ),
-            yaxis=dict(
-                # SOLUCIÓN: El texto y su fuente ahora van estructurados correctamente aquí
-                title=dict(
-                    text="Personas",
-                    font=dict(size=18, family=FONT_FAMILY, color=GUINDA)
-                ),
-                tickfont=dict(size=14, family=FONT_FAMILY),
-                gridcolor="rgba(0,0,0,0.1)", # Línea de cuadrícula sutil
-                range=[0, df_barras['Personas'].max() * 1.10],
-            ),
-            height=height,
-            margin=dict(t=60, b=80, l=40, r=20),
-            showlegend=False,
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)" # Fondo del gráfico transparente
-        )
+        h1, h3 {{ 
+            font-family: 'Noto Sans', sans-serif; 
+            text-align: left; /* Títulos alineados a la derecha */
+            color: #333;
+        }}
+    </style>
 
-        return fig
+    <header class="header-logos">
+        <img src="{l1}" class="logo" style="max-width: 300px;">
+        <img src="{l2}" class="logo" style="max-width: 250px;"> 
+        <img src="{l3}" class="logo" style="max-width: 150px;"> 
+    </header>
 
-    def crear_dona(df_dona, titulo, colores_lista=None, height=480):
-        if colores_lista is None:
-            colores_lista = PALETA_INSTITUCIONAL
+    <!-- 
+    <h1>Producción para el Bienestar (PROBIEN) 2026</h1>
+    <h3>Proceso de Actualización</h3>
+    -->
 
-        colores = colores_lista[:len(df_dona)]
+""", unsafe_allow_html=True)
 
-        df_dona = df_dona.copy() # Evita modificar el DataFrame original fuera de la función
-        df_dona['Categoria'] = df_dona.apply(
-            lambda r: f"<b>{r['Categoria']}</b> <br>({r['Personas'] / df_dona['Personas'].sum() * 100:.2f}%)", axis=1
-        )
-        fig = px.pie(
-            df_dona,
-            values="Personas",
-            names="Categoria",
-            hole=0.45,
-            color_discrete_sequence=colores,
-        )
 
-        fig.add_annotation(
-            text=f"{df_dona['Personas'].sum():,.0f}<br>personas",
-            x=0.5, y=0.5,
-            font=dict(size=22, color=GUINDA, family=FONT_FAMILY),
-            showarrow=False
-        )
+# ═══════════════════════════════════════════════════════════════════════════════
+# TÍTULO Y FECHA
+# ═══════════════════════════════════════════════════════════════════════════════
+# Obtiene la fecha actual usando la zona horaria de CDMX
+hoy = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%d-%m-%Y")
+# hoy = date.today().strftime("%d-%m-%Y")
 
-        fig.update_traces(
-        textposition='inside',
-        textinfo='percent+value',
-        textfont=dict(size=16, color="white", family=FONT_FAMILY),
+def crear_barras(df_barras, titulo, colores_lista=None, height=480):
+    if colores_lista is None:
+        colores_lista = PALETA_INSTITUCIONAL
+
+    # Ajusta los colores según la cantidad de categorías
+    colores = colores_lista[:len(df_barras)]
+
+    # df_barras = df_barras.copy() # Evita modificar el DataFrame original fuera de la función
+    
+    # # Mantiene la misma lógica de etiquetas con porcentaje
+    # df_barras['Categoria_Etiqueta'] = df_barras.apply(
+    #     lambda r: f"<b>{r['Categoria']}</b> <br>({r['Personas'] / df_barras['Personas'].sum() * 100:.2f}%)", axis=1
+    # )
+    
+    # Creación del gráfico de barras
+    fig = px.bar(
+        df_barras,
+        x="Categoria",
+        y="Personas",
+        color="Categoria", # Permite aplicar la secuencia de colores por categoría
+        color_discrete_sequence=colores,
+    )
+
+    # Configuración de los trazos (barras)
+    fig.update_traces(
+        texttemplate='%{y:,.0f}', # Muestra el valor absoluto sobre/dentro de la barra
+        textposition='outside', # Coloca el texto afuera para mejor lectura
+        textfont=dict(size=18, family="Noto Sans Black", color=VERDE),
+        cliponaxis=False, # Permite que las etiquetas se muestren incluso si salen del área del gráfico
+        # textangle=-45, 
         hovertemplate=(
-            "%{label}<br>"      # Salto después de la etiqueta
-            "%{value:,.0f}<br>" # Salto después del valor absoluto
-            # "(%{percent})<br>"      # Salto antes del texto final
+            "<b>%{x}</b>:<br>"          # Categoría y porcentaje
+            "%{y:,.0f}<br>"     # Valor absoluto
             "<extra></extra>"
         ),
-        marker=dict(line=dict(color='white', width=2)),
-        )
+        marker=dict(line=dict(color='white', width=1)),
+    )
 
-        fig.update_layout(
-            hoverlabel=dict(
-                font_size=18, font_family=FONT_FAMILY,
-                bgcolor="white", font_color=VERDE, bordercolor=DORADO
-            ),
+    v_bargap = 0.6 if df_barras["Categoria"].nunique() <= 4 else 0.15
+
+    # Configuración del diseño global
+    fig.update_layout(
+        bargap=v_bargap,
+        hoverlabel=dict(
+            font_size=18, font_family=FONT_FAMILY,
+            bgcolor="white", font_color=VERDE, bordercolor=DORADO
+        ),
+        title=dict(
+            text=titulo,
+            font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY),
+            x=0.5, xanchor="center"
+        ),
+        legend=dict(
+            font=dict(size=18, family=FONT_FAMILY),
+            orientation="h", yanchor="top", y=-0.2, xanchor="center", x=0.5,
+            title=None # Elimina el título automático de la leyenda
+        ),
+        xaxis=dict(
+            title=None, # Quita el título del eje X porque la etiqueta es clara
+            tickfont=dict(size=14, family=FONT_FAMILY, color="Black"),
+            tickangle=-45
+        ),
+        yaxis=dict(
+            # SOLUCIÓN: El texto y su fuente ahora van estructurados correctamente aquí
             title=dict(
-                text=titulo,
-                font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY),
-                x=0.5, xanchor="center"
+                text="Personas",
+                font=dict(size=18, family=FONT_FAMILY, color=GUINDA)
             ),
-            legend=dict(
-                font=dict(size=14, family=FONT_FAMILY),
-                orientation="h", yanchor="top", y=-0.1, xanchor="center", x=0.5
+            tickfont=dict(size=14, family=FONT_FAMILY),
+            gridcolor="rgba(0,0,0,0.1)", # Línea de cuadrícula sutil
+            range=[0, df_barras['Personas'].max() * 1.10],
+        ),
+        height=height,
+        margin=dict(t=60, b=80, l=40, r=20),
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)" # Fondo del gráfico transparente
+    )
+
+    return fig
+
+def crear_dona(
+    df,
+    titulo="",
+    colores_lista=None,
+    height=580,
+    font_size_labels=20,
+    hole=0.45,
+    add_text_center = True,
+):
+    """
+    Dona con etiquetas internas.
+
+    DataFrame esperado:
+        Columna 0 -> Categoría
+        Columna 1 -> Valor
+
+    Ejemplos:
+        df[['Sexo','Personas']]
+        df[['Edad','Personas']]
+        df[['Escolaridad','Personas']]
+    """
+
+    if df is None or df.empty or len(df.columns) < 2:
+        return px.pie(title="Sin datos")
+
+    if colores_lista is None:
+        colores_lista = PALETA_INSTITUCIONAL
+
+    df = df.iloc[:, :2].copy()
+
+    col_categoria = df.columns[0]
+    col_valor = df.columns[1]
+    total = df[col_valor].sum()
+
+    # Etiquetas de 3 líneas
+    df["Etiqueta"] = df.apply(
+        lambda r: (
+            f"<b>{r[col_categoria]}</b><br>"
+            f"({r[col_valor]/total:.1%})"
+        ),
+        axis=1,
+    )
+
+    fig = px.pie(
+        df,
+        values=col_valor,
+        names="Etiqueta",
+        hole=hole,
+        color_discrete_sequence=colores_lista[:len(df)],
+    )
+
+    # Total central
+    if add_text_center:
+        fig.add_annotation(
+            x=0.5,
+            y=0.5,
+            showarrow=False,
+            text=f"<b>{total:,.0f}</b><br>personas",
+            font=dict(
+                size=FONT_SIZE_TITLE,
+                color=GUINDA,
+                family=FONT_FAMILY
             ),
-            height=height,
-            margin=dict(t=60, b=60, l=10, r=10),
-            showlegend=True,
-            paper_bgcolor="rgba(0,0,0,0)"
         )
 
-        return fig
-
-    def crear_waffle(df_waffle, titulo, colores_lista=None, n_cols=10, n_rows=10, height=420):
-        """Waffle simple: cuadros grandes con líneas blancas mínimas."""
-        if colores_lista is None:
-            colores_lista = PALETA_INSTITUCIONAL
-
-        total = df_waffle["Personas"].sum()
-
-        # Protección: si no hay datos, mostrar gráfico vacío
-        if total == 0 or len(df_waffle) == 0:
-            fig = go.Figure()
-            fig.add_annotation(
-                text="Sin datos disponibles",
-                x=0.5, y=0.5, xref="paper", yref="paper",
-                font=dict(size=16, color=GUINDA, family=FONT_FAMILY),
-                showarrow=False
+    fig.update_traces(
+        textposition="inside",
+        textinfo="value+percent",
+        textfont=dict(
+            size=font_size_labels,
+            color="white",
+            family=FONT_FAMILY,
+        ),
+        # insidetextorientation="horizontal",
+        marker=dict(
+            line=dict(
+                color="white",
+                width=2
             )
-            fig.update_layout(
-                title=dict(text=titulo, font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY), x=0.5, xanchor="center"),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showline=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showline=False),
-                height=height,
-                margin=dict(t=60, b=60, l=10, r=10),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)"
-            )
-            return fig
+        ),
+        customdata=df[[col_categoria]],
+        hovertemplate=(
+            "<b>%{customdata[0]}:</b><br>"
+            "%{value:,.0f} personas<br>"
+            "%{percent}"
+            "<extra></extra>"
+        ),
+    )
 
-        df_w = df_waffle.copy().reset_index(drop=True)
-        df_w["Cuadros"] = (df_w["Personas"] / total * (n_cols * n_rows)).round().astype(int)
+    fig.update_layout(
+        title=dict(
+            text=titulo,
+            x=0.5,
+            xanchor="center",
+            font=dict(
+                size=FONT_SIZE_TITLE,
+                color=GUINDA,
+                family=FONT_FAMILY,
+            ),
+        ),
+        hoverlabel=dict(
+            font_size=font_size_labels,
+            font_family=FONT_FAMILY,
+            bgcolor="white",
+            font_color=VERDE,
+            bordercolor=DORADO,
+        ),
+        legend=dict(
+            font=dict(
+                size=20,
+                family=FONT_FAMILY
+            ),
+            orientation="h",
+            yanchor="top",
+            y=-0.10,
+            xanchor="center",
+            x=0.5,
+        ),
+        height=height,
+        margin=dict(
+            t=70,
+            b=60,
+            l=20,
+            r=20,
+        ),
+        showlegend=True,
+        paper_bgcolor="rgba(0,0,0,0)",
+        uniformtext_minsize=12,
+    )
 
-        diff = (n_cols * n_rows) - df_w["Cuadros"].sum()
-        if diff != 0:
-            # Usar el índice con mayor valor, protegiendo contra series vacías
-            df_w_positivo = df_w[df_w["Personas"] > 0]
-            if len(df_w_positivo) > 0:
-                idx_max = df_w_positivo["Personas"].idxmax()
-            else:
-                idx_max = 0
-            df_w.loc[idx_max, "Cuadros"] += diff
+    return fig
 
-        labels = []
-        for idx, row in df_w.iterrows():
-            for _ in range(max(0, int(row["Cuadros"]))):
-                labels.append(row["Categoria"])
+def crear_barras_porcentaje(
+    df: pd.DataFrame,
+    col_x: str,
+    col_color: str,
+    col_valores: str = "Personas",
+    titulo: str = "Avance",
+    lista_colores: list = None,
+    orden_ascendente: bool = True,
+    invertir_apilado: bool = True,
+    height = 680,
+) -> go.Figure:
 
-        # Protección si labels quedó vacío
-        if len(labels) == 0:
-            fig = go.Figure()
-            fig.add_annotation(
-                text="Sin datos suficientes",
-                x=0.5, y=0.5, xref="paper", yref="paper",
-                font=dict(size=16, color=GUINDA, family=FONT_FAMILY),
-                showarrow=False
-            )
-            fig.update_layout(
-                title=dict(text=titulo, font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY), x=0.5, xanchor="center"),
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showline=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showline=False),
-                height=height,
-                margin=dict(t=60, b=60, l=10, r=10),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)"
-            )
-            return fig
-
-        x_coords = [i % n_cols for i in range(len(labels))]
-        y_coords = [n_rows - 1 - i // n_cols for i in range(len(labels))]
-
-        categorias_unicas = df_w["Categoria"].tolist()
-
+    # ----------------------------
+    # VALIDACIÓN SEGURA
+    # ----------------------------
+    if not isinstance(df, pd.DataFrame) or df.empty:
         fig = go.Figure()
-
-        for cat_idx, cat in enumerate(categorias_unicas):
-            cat_x = [x_coords[i] for i in range(len(labels)) if labels[i] == cat]
-            cat_y = [y_coords[i] for i in range(len(labels)) if labels[i] == cat]
-
-            if len(cat_x) == 0:
-                continue
-
-            pct = df_w[df_w["Categoria"] == cat]["Personas"].values[0] / total * 100
-            personas = df_w[df_w["Categoria"] == cat]["Personas"].values[0]
-
-            fig.add_trace(go.Scatter(
-                x=cat_x,
-                y=cat_y,
-                mode="markers",
-                marker=dict(
-                    size=42,
-                    symbol="square",
-                    color=colores_lista[cat_idx % len(colores_lista)],
-                    line=dict(color="white", width=0.4)
-                ),
-                name=f"{cat} ( {pct:.1f}% )",
-                hovertemplate=(
-                    f"{cat}: "
-                    f"{personas:,.0f} "
-                    f"({pct:.1f}%) personas actualizadas"
-                    "<extra></extra>"
-                ),
-                showlegend=True
-            ))
-
         fig.update_layout(
-            title=dict(text=titulo, font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY), x=0.5, xanchor="center"),
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, n_cols - 0.5], showline=False),
-            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, range=[-0.5, n_rows - 0.5], scaleanchor="x", showline=False),
-            hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO),
-            legend=dict(font=dict(size=12, family=FONT_FAMILY), orientation="h", yanchor="top", y=-0.05, xanchor="center", x=0.5),
-            height=height,
-            margin=dict(t=60, b=60, l=10, r=10),
+            title=f"{titulo} (Sin datos disponibles)",
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)"
         )
-
         return fig
 
-    def crear_mapa_calor(df_original, geojson_data, estados_filtrados=None):
-        df_estado_meta = df_original.groupby("NOM_EDO_PROD")["Personas"].sum().reset_index()
-        df_estado_meta.columns = ["NOM_EDO_PROD", "Meta"]
+    # ----------------------------
+    # AGRUPACIÓN BASE
+    # ----------------------------
+    df_agrupado = (
+        df.groupby([col_x, col_color], as_index=False)[col_valores]
+        .sum()
+    )
+    # ----------------------------
+    # PORCENTAJES
+    # ----------------------------
+    totales = df_agrupado.groupby(col_x)[col_valores].transform("sum")
+    df_agrupado["Porcentaje"] = (df_agrupado[col_valores] / totales * 100).round(1)
+    # ----------------------------
+    # ORDEN CORRECTO (CLAVE)
+    # ordenado por TOTAL REAL del valor (ej: Actualizados)
+    # ----------------------------
+    categorias_color = list(df_agrupado[col_color].unique())
+    # depues de este se puede aplicar la lógica para invertir el orden de las categorias en barras
+    orden_x = (
+        df_agrupado[df_agrupado[col_color]==categorias_color[0]]
+        .sort_values("Porcentaje", ascending=orden_ascendente)
+    )[col_x].tolist()
+    # ----------------------------
+    # ORDEN DE CATEGORÍAS (STACK)
+    # ----------------------------
+    categorias = df_agrupado[col_color].unique().tolist()
+    if invertir_apilado:
+        categorias = categorias[::-1]
 
-        df_act_filtro = df_original[df_original["ACTUALIZADO"] == "Si"]
-        if len(df_act_filtro) > 0:
-            df_act = df_act_filtro.groupby("NOM_EDO_PROD")["Personas"].sum().reset_index()
-            df_act.columns = ["NOM_EDO_PROD", "Actualizados"]
-        else:
-            df_act = pd.DataFrame(columns=["NOM_EDO_PROD", "Actualizados"])
+    # ----------------------------
+    # PALETA DE COLORES
+    # ----------------------------
+    if lista_colores:
+        color_map = {
+            cat: lista_colores[i % len(lista_colores)]
+            for i, cat in enumerate(categorias)
+        }
+    else:
+        color_map = {
+            cat: ["#235B4E", "#D4C19C", "#621132", "#3A7D6B"][i % 4]
+            for i, cat in enumerate(categorias)
+        }
 
-        df_estado_mapa = df_estado_meta.merge(df_act, on="NOM_EDO_PROD", how="left").fillna(0)
-        df_estado_mapa["Pendientes"] = df_estado_mapa["Meta"] - df_estado_mapa["Actualizados"]
-        df_estado_mapa["Pct_Avance"] = np.where(
-            df_estado_mapa["Meta"] > 0,
-            (df_estado_mapa["Actualizados"] / df_estado_mapa["Meta"] * 100).round(1),
-            0
-        )
-        df_estado_mapa["Pct_Pendientes"] = (100 - df_estado_mapa["Pct_Avance"]).round(1)
-        df_estado_mapa["NOMGEO"] = df_estado_mapa["NOM_EDO_PROD"].map(MAPEO_ESTADOS)
+    # ----------------------------
+    # GRÁFICA
+    # ----------------------------
+    fig = px.bar(
+        df_agrupado,
+        x=col_x,
+        y="Porcentaje",
+        color=col_color,
+        text=df_agrupado["Porcentaje"].map("{:.1f}%".format),
+        color_discrete_map=color_map,
+        category_orders={
+            col_x: orden_x,
+            col_color: categorias
+        },
+        barmode="stack",
+    )
 
-        todos_estados_geo = [f["properties"]["NOMGEO"] for f in geojson_data["features"]]
-        df_completo = pd.DataFrame({"NOMGEO": todos_estados_geo})
-        df_completo = df_completo.merge(df_estado_mapa, on="NOMGEO", how="left").fillna(0)
+    # ----------------------------
+    # ESTILO DE BARRAS
+    # ----------------------------
+    fig.update_traces(
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=22, color="white"),
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "<b>Categoría:</b> %{customdata[1]}<br>"
+            "<b>Cantidad:</b> %{customdata[0]:,.0f}<br>"
+            "<b>Porcentaje:</b> %{y:.1f}%"
+            "<extra></extra>"
+        ),
+        customdata=df_agrupado[[col_valores, col_color]].values
+    )
 
-        hay_filtro = estados_filtrados is not None and len(estados_filtrados) > 0
+    v_bargap = 0.6 if df_agrupado[col_x].nunique() <= 4 else 0.15
 
-        if hay_filtro:
-            estados_filtrados_geo = [MAPEO_ESTADOS.get(e, e) for e in estados_filtrados]
-            df_completo["Es_Filtrado"] = df_completo["NOMGEO"].isin(estados_filtrados_geo)
-        else:
-            df_completo["Es_Filtrado"] = df_completo["Meta"] > 0
-
-        df_completo["hover_text"] = df_completo.apply(
-            lambda r: (
-                f"<b>{r['NOMGEO']}:</b><br>"
-                f"Meta : {r['Meta']:,.0f} (100%),<br>"
-                f"Actualizados: {r['Actualizados']:,.0f} ({r['Pct_Avance']:.1f}%),<br>"
-                f"Pendientes: {r['Pendientes']:,.0f} ({r['Pct_Pendientes']:.1f}%)<br>"
-            ) if r["Meta"] > 0 else f"{r['NOMGEO']}:<br>Sin datos en este filtro",
-            axis=1
-        )
-
-        colorscale_institucional = [
-            [0.0, "#691C32"],
-            [0.2, "#9F2241"],
-            [0.4, "#C29E5C"],
-            [0.5, "#52492E"],
-            [0.6, "#44546A"],
-            [0.8, "#235B4E"],
-            [1.0, "#10312B"],
-        ]
-
-        fig = go.Figure()
-
-        if hay_filtro:
-            df_no_filtrado = df_completo[~df_completo["Es_Filtrado"]].copy()
-            df_filtrado_mapa = df_completo[df_completo["Es_Filtrado"]].copy()
-
-            if len(df_no_filtrado) > 0:
-                fig.add_trace(go.Choroplethmap(
-                    geojson=geojson_data,
-                    locations=df_no_filtrado["NOMGEO"],
-                    z=[0] * len(df_no_filtrado),
-                    featureidkey="properties.NOMGEO",
-                    colorscale=[[0, "#E0E0E0"], [1, "#BDBDBD"]],
-                    showscale=False,
-                    text=df_no_filtrado["hover_text"],
-                    hoverinfo="text",
-                    marker=dict(opacity=0.5, line=dict(width=0.8, color="white"))
-                ))
-
-            if len(df_filtrado_mapa) > 0:
-                fig.add_trace(go.Choroplethmap(
-                    geojson=geojson_data,
-                    locations=df_filtrado_mapa["NOMGEO"],
-                    z=df_filtrado_mapa["Pct_Avance"],
-                    featureidkey="properties.NOMGEO",
-                    colorscale=colorscale_institucional,
-                    zmin=0, zmax=100,
-                    showscale=True,
-                    colorbar=dict(
-                        title=dict(text="% Avance", font=dict(size=14, family=FONT_FAMILY)),
-                        tickfont=dict(size=12, family=FONT_FAMILY),
-                        ticksuffix="%", len=0.8, thickness=12, x=1.0, xpad=2
-                    ),
-                    text=df_filtrado_mapa["hover_text"],
-                    hoverinfo="text",
-                    marker=dict(opacity=0.9, line=dict(width=1.2, color="white"))
-                ))
-        else:
-            df_con_datos = df_completo[df_completo["Meta"] > 0].copy()
-            df_sin_datos = df_completo[df_completo["Meta"] == 0].copy()
-
-            if len(df_sin_datos) > 0:
-                fig.add_trace(go.Choroplethmap(
-                    geojson=geojson_data,
-                    locations=df_sin_datos["NOMGEO"],
-                    z=[0] * len(df_sin_datos),
-                    featureidkey="properties.NOMGEO",
-                    colorscale=[[0, "#E0E0E0"], [1, "#BDBDBD"]],
-                    showscale=False,
-                    text=df_sin_datos["hover_text"],
-                    hoverinfo="text",
-                    marker=dict(opacity=0.5, line=dict(width=0.8, color="white"))
-                ))
-
-            if len(df_con_datos) > 0:
-                fig.add_trace(go.Choroplethmap(
-                    geojson=geojson_data,
-                    locations=df_con_datos["NOMGEO"],
-                    z=df_con_datos["Pct_Avance"],
-                    featureidkey="properties.NOMGEO",
-                    colorscale=colorscale_institucional,
-                    zmin=0, zmax=100,
-                    showscale=True,
-                    colorbar=dict(
-                        title=dict(text="% Avance", font=dict(size=14, family=FONT_FAMILY)),
-                        tickfont=dict(size=12, family=FONT_FAMILY),
-                        ticksuffix="%", len=0.8, thickness=12, x=1.0, xpad=2
-                    ),
-                    text=df_con_datos["hover_text"],
-                    hoverinfo="text",
-                    marker=dict(opacity=0.9, line=dict(width=1, color="white"))
-                ))
-
-        fig.update_layout(
-            map=dict(
-                style="white-bg",
-                zoom=4.7,
-                center=dict(lat=23.6345, lon=-102.5528),
-            ),
+    # ----------------------------
+    # DISEÑO INSTITUCIONAL
+    # ----------------------------
+    fig.update_layout(
+        title=dict(
+            text=f"<b>{titulo}</b>",
+            font=dict(size=34, color="#621132")
+        ),
+        xaxis=dict(
+            title="",
+            tickangle=-35,
+            tickfont=dict(size=18, family=FONT_FAMILY,color="black"),
+        ),
+        yaxis=dict(
             title=dict(
-                text="Mapa de Avance por Entidad Federativa",
-                font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY),
-                x=0.5, xanchor="center"
+                text="Porcentaje (%)",
+                font=dict(
+                size=22,          # Tamaño del título
+                family=FONT_FAMILY,
+                color="black"
+                ),
             ),
-            hoverlabel=dict(
-                font_size=18, font_family=FONT_FAMILY,
-                bgcolor="white", font_color=VERDE, bordercolor=DORADO
+            range=[0, 110],
+            ticksuffix="%",
+            tickfont=dict(size=18, family=FONT_FAMILY,color="black"),
+        ),
+        legend=dict(
+            title=dict(
+                text=f"<b>{str(col_color).upper()}</b>",
+                font=dict(size=18, color="black", family=FONT_FAMILY)
             ),
-            height=800,
-            margin=dict(t=50, b=0, l=0, r=0),
-            paper_bgcolor="rgba(0,0,0,0)"
+            # y=1.02, 
+            orientation="h",
+            y=-0.4,
+            x=0.5,
+            # yanchor="bottom",
+            xanchor="center",
+            font=dict(
+                size=22,   # <- tamaño de No / Si
+                family=FONT_FAMILY,
+                color="black"
+            ),
+        ),
+        bargap=v_bargap,
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=40, r=20, t=80, b=120),
+        # uniformtext_minsize=14,
+        # uniformtext_mode="hide",
+    )
+
+    return fig
+
+def separador(texto="", color=DORADO):
+    if texto:
+        st.markdown(f"""
+            
+                {texto}
+            
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+            
+        """, unsafe_allow_html=True)
+
+def grafica_cumsum(
+    df,
+    periodo="semana",
+    n=5,
+    titulo=None,
+    color="#3A7D6B",
+    fill_color="rgba(58,125,107,0.15)",
+    titulo_color="#691C32",
+    text_color="#691C32",
+    text_size=18,
+    height=430,
+):
+
+    # Agrupar y ordenar
+    df_plot = (
+        df.groupby(periodo, as_index=False)["Personas"]
+          .sum()
+          .sort_values(periodo)
+    )
+
+    # Acumulado histórico
+    df_plot["Acumulado"] = df_plot["Personas"].cumsum()
+
+    # Últimos n periodos
+    df_plot = df_plot.tail(n)
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x=df_plot[periodo],
+            y=df_plot["Acumulado"],
+            mode="lines+markers+text",
+
+            text=df_plot["Acumulado"].map("{:,.0f}".format),
+            textposition="top center",
+            cliponaxis=False,
+
+            textfont=dict(
+                size=text_size,
+                color=text_color,
+                family=FONT_FAMILY
+            ),
+
+            line=dict(
+                color=color,
+                width=3
+            ),
+
+            marker=dict(
+                size=14,
+                color=color,
+                line=dict(
+                    color="white",
+                    width=2
+                )
+            ),
+
+            fill="tozeroy",
+            fillcolor=fill_color,
+
+            customdata=df_plot["Personas"],
+
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Acumulado: %{y:,.0f}<br>"
+                "Periodo: %{customdata:,.0f} personas"
+                "<extra></extra>"
+            ),
         )
+    )
 
-        return fig
+    y_max = df_plot["Acumulado"].max()
+    y_min = df_plot["Acumulado"].min()
 
-    def separador(texto="", color=DORADO):
-        if texto:
-            st.markdown(f"""
-                
-                    {texto}
-                
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                
-            """, unsafe_allow_html=True)
+    y_padding = (y_max - y_min) * 0.25  # 25% de aire arriba
 
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # LOGOS + ESTILOS CSS
-    # ═══════════════════════════════════════════════════════════════════════════════
+    fig.update_layout(
 
-    l1, l2, l3 = img_to_b64("logo1.png"), img_to_b64("logo2.png"), img_to_b64("logo3.png")
+        title=dict(
+            text=titulo or f"Acumulado por {periodo.capitalize()}",
+            font=dict(
+                size=FONT_SIZE_TITLE,
+                color=titulo_color,
+                family=FONT_FAMILY
+            ),
+            x=0
+        ),
 
-    st.markdown(f"""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;600;700;900&display=swap');
+        height=height,
 
-            [data-testid="stAppViewBlockContainer"] {{
-                max-width: 100% !important;
-                padding: 5 !important;
-            }}
+        template="plotly_white",
 
-            .header-logos {{
-                width: 100%;
-                display: flex;
-                justify-content: flex-end;
-                align-items: center;
-                padding: 5px;
-                gap: 10px;
-            }}
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
 
-            .logo {{
-                width: 30%;
-                height: auto;
-                object-fit: contain;
-            }}
+        margin=dict(l=60, r=60, t=45, b=20),
 
-            h1, h3 {{
-                font-family: '{FONT_FAMILY}', sans-serif;
-                text-align: left;
-                color: #333;
-            }}
+        hoverlabel=dict(
+            bgcolor="white",
+            font_size=16,
+            font_family=FONT_FAMILY
+        ),
 
-            /* Métricas estilizadas */
-            [data-testid="stMetric"] {{
-                text-align: center;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                background: linear-gradient(135deg, #ffffff 0%, {CREMA} 100%);
-                border: 2px solid {DORADO};
-                border-radius: 16px;
-                padding: 8px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-                transition: transform 0.2s;
-            }}
-            [data-testid="stMetric"]:hover {{
-                transform: translateY(-2px);
-                box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-            }}
-            [data-testid="stMetricLabel"] {{
-                display: flex;
-                justify-content: center;
-                color: {VERDE};
-                font-family: '{FONT_FAMILY}';
-                font-weight: 600;
-                font-size: 16px !important;
-            }}
-            [data-testid="stMetricValue"] {{
-                display: flex;
-                justify-content: center;
-                color: {GUINDA};
-                font-weight: bold;
-                font-family: '{FONT_FAMILY}';
-            }}
+        xaxis=dict(
+            title=" ",
+            tickangle=-45,
+            showgrid=False,
+            zeroline=False,
+            showline=False,
+            tickfont=dict(
+                size=text_size,
+                family=FONT_FAMILY
+            )
+        ),
 
-            /* Segmented control */
-            button[data-testid="stBaseButton-segmented_controlActive"] {{
-                border-color: {VERDE} !important;
-                background-color: {DORADO} !important;
-                color: white !important;
-            }}
-            button[data-testid="stBaseButton-segmented_control"]:hover {{
-                border-color: {VERDE} !important;
-            }}
+        yaxis=dict(
+            title="Personas acumuladas",
+            gridcolor="rgba(0,0,0,.08)",
+            gridwidth=1,
+            range=[y_min, y_max + y_padding],
+            autorange=False,
+            zeroline=False,
+            showline=False,
+            visible=False,
+            tickfont=dict(
+                size=18,
+                family=FONT_FAMILY
+            )
+        ),
+    )
 
-            /* Tabs - Color verde institucional */
-            .stTabs [data-baseweb="tab-list"] {{
-                gap: 4px;
-                border-bottom: 2px solid {DORADO};
-            }}
-            .stTabs [data-baseweb="tab"] {{
-                border-radius: 8px 8px 0 0;
-                padding: 10px 20px;
-                font-family: '{FONT_FAMILY}';
-                font-weight: 600;
-                font-size: 15px;
-                color: #555;
-                transition: all 0.2s ease;
-            }}
-            .stTabs [data-baseweb="tab"]:hover {{
-                background-color: rgba(40, 92, 77, 0.1) !important;
-                color: {VERDE} !important;
-            }}
-            .stTabs [aria-selected="true"] {{
-                background-color: {VERDE} !important;
-                color: white !important;
-                border-color: {VERDE} !important;
-            }}
-            .stTabs [data-baseweb="tab-highlight"] {{
-                background-color: {VERDE} !important;
-            }}
-            .stTabs [data-baseweb="tab-border"] {{
-                background-color: {VERDE} !important;
-            }}
+    return fig
 
-            /* Multiselect tags */
-            span[data-baseweb="tag"] {{
-                background-color: {VERDE} !important;
-            }}
-            span[data-baseweb="tag"] span {{
-                color: white !important;
-            }}
-            span[data-baseweb="tag"] svg {{
-                fill: white !important;
-            }}
-            div[data-baseweb="select"] > div:focus-within {{
-                border-color: {VERDE} !important;
-                box-shadow: 0 0 0 1px {VERDE} !important;
-            }}
 
-            /* Calendar */
-            div[data-baseweb="calendar"] div[aria-selected="true"] {{
-                background-color: {VERDE} !important;
-                color: white !important;
-            }}
-            div[data-baseweb="calendar"] div:hover:not([aria-selected="true"]) {{
-                border-color: {VERDE} !important;
-            }}
+# ═══════════════════════════════════════════════════════════════════════════════
+# LOGOS + ESTILOS CSS
+# ═══════════════════════════════════════════════════════════════════════════════
+    # 1. Inyectas el estilo CSS personalizado
+st.markdown(f"""
+    <style>
+    div.stDownloadButton > button:first-child {{
+        background-color: {VERDE_CLARO}; /* Tu color de fondo (Verde) */
+        color: white;              /* Color del texto */
+        border: none;
+    }}
+    div.stDownloadButton > button:first-child:hover {{
+        background-color: {VERDE}; /* Color cuando pasas el mouse */
+        color: white;
+    }}
+        div.stButton > button:first-child {{
+        background-color: {VERDE_CLARO}; /* Tu color de fondo (Verde) */
+        color: white;              /* Color del texto */
+        border: none;
+    }}
+    div.stButton > button:first-child:hover {{
+        background-color: {VERDE}; /* Color cuando pasas el mouse */
+        color: white;
+    }}
+    </style>
+""", unsafe_allow_html=True)
 
-            /* Date input focus */
-            div[data-baseweb="input"]:focus-within {{
-                border-color: {VERDE} !important;
-            }}
 
-            /* DataFrame focus */
-            [data-testid="stDataFrame"] > div:focus-within {{
-                border: 0.5px solid {VERDE} !important;
-                box-shadow: 0 0 0 0.5px {VERDE} !important;
-            }}
+st.markdown(f"""
+    <style>
+        @import url('https://googleapis.com');
 
-            /* Sidebar institucional - Fondo guinda */
-            [data-testid="stSidebar"] {{
-                background: linear-gradient(180deg, {GUINDA} 0%, {GUINDA_CLARO} 100%) !important;
-            }}
-            /* Botón clear del multiselect visible */
-            [data-testid="stSidebar"] * {{
-                color: white !important;
-            }}
-            [data-testid="stSidebar"] div[data-baseweb="select"] svg {{
-                fill: {DORADO} !important;
-            }}
-            [data-testid="stSidebar"] h1,
-            [data-testid="stSidebar"] h2,
-            [data-testid="stSidebar"] h3,
-            [data-testid="stSidebar"] h4 {{
-                color: {DORADO} !important;
-                font-family: '{FONT_FAMILY}' !important;
-            }}
-            [data-testid="stSidebar"] label {{
-                color: {DORADO} !important;
-                font-weight: 600 !important;
-                font-family: '{FONT_FAMILY}' !important;
-            }}
+        [data-testid="stAppViewBlockContainer"] {{
+            max-width: 100% !important;
+            padding: 5 !important;
+        }}
 
-            /* Selectbox, Multiselect, DateInput - fondo y borde */
-            [data-testid="stSidebar"] .stSelectbox > div > div,
-            [data-testid="stSidebar"] .stMultiSelect > div > div,
-            [data-testid="stSidebar"] .stDateInput > div > div {{
-                background-color: rgba(255,255,255,0.08) !important;
-                border-color: rgba(212, 193, 156, 0.4) !important;
-                border-radius: 8px !important;
-            }}
+        .header-logos {{
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 5px;
+            gap: 10px;
+        }}
 
-            /* Borde verde al hacer focus/seleccionar */
-            [data-testid="stSidebar"] .stSelectbox > div > div:focus-within,
-            [data-testid="stSidebar"] .stMultiSelect > div > div:focus-within,
-            [data-testid="stSidebar"] .stDateInput > div > div:focus-within,
-            [data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within,
-            [data-testid="stSidebar"] div[data-baseweb="input"]:focus-within {{
-                border-color: {VERDE_CLARO} !important;
-                box-shadow: 0 0 0 2px rgba(58, 125, 107, 0.4) !important;
-            }}
+        .logo {{
+            width: 30%;
+            height: auto;
+            object-fit: contain;
+        }}
 
-            /* Tags del multiselect */
-            [data-testid="stSidebar"] span[data-baseweb="tag"] {{
-                background-color: {VERDE} !important;
-                border-radius: 6px !important;
-            }}
-            [data-testid="stSidebar"] span[data-baseweb="tag"] span {{
-                color: white !important;
-                font-weight: bold !important;
-            }}
-            [data-testid="stSidebar"] span[data-baseweb="tag"] svg {{
-                fill: white !important;
-            }}
+        h1, h3 {{
+            font-family: '{FONT_FAMILY}', sans-serif;
+            text-align: left;
+            color: #333;
+        }}
 
-            /* Dropdown abierto - borde verde */
-            [data-testid="stSidebar"] div[data-baseweb="popover"] {{
-                border-color: {VERDE_CLARO} !important;
-            }}
+        /* Métricas estilizadas */
+        [data-testid="stMetric"] {{
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffffff 0%, {CREMA} 100%);
+            border: 2px solid {DORADO};
+            border-radius: 16px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }}
+        [data-testid="stMetric"]:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }}
+        [data-testid="stMetricLabel"] {{
+            display: flex;
+            justify-content: center;
+            color: {VERDE};
+            font-family: '{FONT_FAMILY}';
+            font-weight: 600;
+            font-size: 16px !important;
+        }}
+        [data-testid="stMetricValue"] {{
+            display: flex;
+            justify-content: center;
+            color: {GUINDA};
+            font-weight: bold;
+            font-family: '{FONT_FAMILY}';
+        }}
 
-            /* Calendario - selección verde */
-            [data-testid="stSidebar"] div[data-baseweb="calendar"] div[aria-selected="true"] {{
-                background-color: {VERDE} !important;
-                color: white !important;
-            }}
-            [data-testid="stSidebar"] div[data-baseweb="calendar"] div:hover:not([aria-selected="true"]) {{
-                border-color: {VERDE_CLARO} !important;
-                background-color: rgba(58, 125, 107, 0.15) !important;
-            }}
+        /* Segmented control */
+        button[data-testid="stBaseButton-segmented_controlActive"] {{
+            border-color: {VERDE} !important;
+            background-color: {DORADO} !important;
+            color: white !important;
+        }}
+        button[data-testid="stBaseButton-segmented_control"]:hover {{
+            border-color: {VERDE} !important;
+        }}
 
-            /* Texto descriptivo sidebar */
-            [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
-                color: rgba(255,255,255,0.8) !important;
-            }}
-        </style>
+        /* Tabs - Color verde institucional */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 4px;
+            border-bottom: 2px solid {DORADO};
+        }}
+        .stTabs [data-baseweb="tab"] {{
+            border-radius: 8px 8px 0 0;
+            padding: 10px 20px;
+            font-family: '{FONT_FAMILY}';
+            font-weight: 600;
+            font-size: 15px;
+            color: #555;
+            transition: all 0.2s ease;
+        }}
+        .stTabs [data-baseweb="tab"]:hover {{
+            background-color: rgba(40, 92, 77, 0.1) !important;
+            color: {VERDE} !important;
+        }}
+        .stTabs [aria-selected="true"] {{
+            background-color: {VERDE} !important;
+            color: white !important;
+            border-color: {VERDE} !important;
+        }}
+        .stTabs [data-baseweb="tab-highlight"] {{
+            background-color: {VERDE} !important;
+        }}
+        .stTabs [data-baseweb="tab-border"] {{
+            background-color: {VERDE} !important;
+        }}
 
-        <header>
-            
-            
-            
-        </header>
+        /* Multiselect tags */
+        span[data-baseweb="tag"] {{
+            background-color: {VERDE} !important;
+        }}
+        span[data-baseweb="tag"] span {{
+            color: white !important;
+        }}
+        span[data-baseweb="tag"] svg {{
+            fill: white !important;
+        }}
+        div[data-baseweb="select"] > div:focus-within {{
+            border-color: {VERDE} !important;
+            box-shadow: 0 0 0 1px {VERDE} !important;
+        }}
+
+        /* Calendar */
+        div[data-baseweb="calendar"] div[aria-selected="true"] {{
+            background-color: {VERDE} !important;
+            color: white !important;
+        }}
+        div[data-baseweb="calendar"] div:hover:not([aria-selected="true"]) {{
+            border-color: {VERDE} !important;
+        }}
+
+        /* Date input focus */
+        div[data-baseweb="input"]:focus-within {{
+            border-color: {VERDE} !important;
+        }}
+
+        /* DataFrame focus */
+        [data-testid="stDataFrame"] > div:focus-within {{
+            border: 0.5px solid {VERDE} !important;
+            box-shadow: 0 0 0 0.5px {VERDE} !important;
+        }}
+
+        /* Sidebar institucional - Fondo guinda */
+        [data-testid="stSidebar"] {{
+            background: linear-gradient(180deg, {GUINDA} 0%, {GUINDA_CLARO} 100%) !important;
+        }}
+        
+        /* Modificado: Excluimos únicamente la etiqueta de entrada que está estrictamente dentro de un multiselect */
+        [data-testid="stSidebar"] *:not(.stMultiSelect input) {{
+            color: white !important;
+        }}
+
+        /* NUEVO: Aplica color negro en tiempo real solo al input interno del multiselect en la barra lateral */
+        [data-testid="stSidebar"] .stMultiSelect input {{
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+        }}
+
+        [data-testid="stSidebar"] div[data-baseweb="select"] svg {{
+            fill: {DORADO} !important;
+        }}
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] h4 {{
+            color: {DORADO} !important;
+            font-family: '{FONT_FAMILY}' !important;
+        }}
+        [data-testid="stSidebar"] label {{
+            color: {DORADO} !important;
+            font-weight: 600 !important;
+            font-family: '{FONT_FAMILY}' !important;
+        }}
+
+        /* Selectbox, Multiselect, DateInput - fondo y borde */
+        [data-testid="stSidebar"] .stSelectbox > div > div,
+        [data-testid="stSidebar"] .stMultiSelect > div > div,
+        [data-testid="stSidebar"] .stDateInput > div > div {{
+            background-color: rgba(255,255,255,0.08) !important;
+            border-color: rgba(212, 193, 156, 0.4) !important;
+            border-radius: 8px !important;
+        }}
+
+        /* Borde verde al hacer focus/seleccionar */
+        [data-testid="stSidebar"] .stSelectbox > div > div:focus-within,
+        [data-testid="stSidebar"] .stMultiSelect > div > div:focus-within,
+        [data-testid="stSidebar"] .stDateInput > div > div:focus-within,
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:focus-within,
+        [data-testid="stSidebar"] div[data-baseweb="input"]:focus-within {{
+            border-color: {VERDE_CLARO} !important;
+            box-shadow: 0 0 0 2px rgba(58, 125, 107, 0.4) !important;
+        }}
+
+        /* Tags del multiselect */
+        [data-testid="stSidebar"] span[data-baseweb="tag"] {{
+            background-color: {VERDE} !important;
+            border-radius: 6px !important;
+        }}
+        [data-testid="stSidebar"] span[data-baseweb="tag"] span {{
+            color: white !important;
+            font-weight: bold !important;
+        }}
+        [data-testid="stSidebar"] span[data-baseweb="tag"] svg {{
+            fill: white !important;
+        }}
+
+        /* Dropdown abierto - borde verde */
+        [data-testid="stSidebar"] div[data-baseweb="popover"] {{
+            border-color: {VERDE_CLARO} !important;
+        }}
+
+        /* Calendario - selección verde */
+        [data-testid="stSidebar"] div[data-baseweb="calendar"] div[aria-selected="true"] {{
+            background-color: {VERDE} !important;
+            color: white !important;
+        }}
+        [data-testid="stSidebar"] div[data-baseweb="calendar"] div:hover:not([aria-selected="true"]) {{
+            border-color: {VERDE_CLARO} !important;
+            background-color: rgba(58, 125, 107, 0.15) !important;
+        }}
+
+        /* Texto descriptivo sidebar */
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {{
+            color: rgba(255,255,255,0.8) !important;
+        }}
+    </style>
+
+    <header>
+    </header>
+""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CARGA DE DATOS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@st.cache_data
+def import_df(ruta):
+    return pl.read_parquet(ruta).to_pandas()
+
+df = import_df("concentrado_actualizados.parquet")
+
+fecha_datos =format_date(df["dia"].max(), format="d 'de' MMMM 'de' yyyy", locale="es")
+
+st.markdown(f"""
+    <div style="line-height: 1;">
+        <h3 style="margin-bottom: 0;">Actualización o Corroboración de Datos e Integración de Expedientes</h3>
+        <p style="font-size: 1.2em; color: {AMARILLO}; margin-top: 0px; font-weight: bold;">
+            Información actualizada al <span style="color: {VERDE}; font-weight: bold;">{fecha_datos}</span> 
+        </p>
+    </div>
     """, unsafe_allow_html=True)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Definir usuarios y accesos
+# ═══════════════════════════════════════════════════════════════════════════════
+username = st.session_state["username"]
+tipo = st.secrets["auth"]["credentials"]["usernames"][username].get("tipo") if username in st.secrets['auth']['credentials']['usernames'] else "operativo"
+oref = st.secrets["auth"]["credentials"]["usernames"][username].get("oref") if username in st.secrets['auth']['credentials']['usernames'] else []
 
+df = df[df["NOM_EDO_PROD"].isin(oref)]
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # CARGA DE DATOS
-    # ═══════════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR - FILTROS
+# ═══════════════════════════════════════════════════════════════════════════════
 
-
-    @st.cache_data
-    def import_df(ruta):
-        return pl.read_parquet(ruta).to_pandas()
-
-    df = import_df("concentrado_actualizados.parquet")
-    geojson_data = cargar_geojson("Mapa_estatal_2022_INEGI.geojson")
-
-    filtro_usuario = {
-        "admin": None,
-        "usuario": df["NOM_EDO_PROD"].isin(["CAMPECHE"]),
-    }
-    condicion = filtro_usuario.get(st.session_state['username'])
-    if condicion is not None:
-        df = df[condicion]
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # SIDEBAR - FILTROS
-    # ═══════════════════════════════════════════════════════════════════════════════
-
-    with st.sidebar:
-        st.header("Filtros de información")
-
-        if st.session_state['username'] == 'admin':
-            opcion = st.selectbox("Seleccionar proceso", ["Nacional", "Prueba piloto (8 estados)", "Caña","Reposición de tarjetas","Enviados a OREF (corrección)"])
-        else:
-            opcion = None
-
-    filtros = {
-        "Nacional": None,
-        "Caña": df["CONADESUCA"] == "Si",
-        "Prueba piloto (8 estados)": df["OCHO_ENT"]== "Si",
-        "Reposición de tarjetas": df["reposición_tarjeta"] == "Si",
-        "Enviados a OREF (corrección)": df["enviados_incongruencias"] == "Si",
-    }
-
-
-    condicion = filtros.get(opcion)
-    if condicion is not None:
-        df = df[condicion]
-
-    with st.sidebar:
-        if st.session_state['username'] == 'admin':
-            estados = st.multiselect(
-                "Seleccionar estados",
-                options=sorted(df["NOM_EDO_PROD"].unique()),
-                default=[],
-                placeholder="Todos los estados"
-            )
-        else:
-            estados = []
-
-    # Guardar copia para el mapa
-    df_para_mapa = df.copy()
-    estados_seleccionados = estados if len(estados) > 0 else None
-
-    if len(estados) > 0:
-        df = df[df["NOM_EDO_PROD"].isin(estados)]
-
-    # Meta - protección contra DataFrame vacío
-    meta = df['Personas'].sum() if len(df) > 0 else 0
-
-    # Filtro por fecha
-    if len(df) > 0:
-        inicio = df["dia"].min().date() if pd.notna(df["dia"].min()) else datetime.date(2025, 12, 3)
-        fin = df["dia"].max().date() if pd.notna(df["dia"].max()) else datetime.date.today()
+with st.sidebar:
+    st.header("Filtros de información")
+    if tipo == 'administrador':
+        opcion = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "CONADESUCA", "Reposición de tarjetas", "Enviados a OREF (corrección)"])
     else:
-        inicio = datetime.date(2025, 12, 3)
-        fin = datetime.date.today()
+        opcion = None
+
+filtros = {
+    "NACIONAL": None,
+    "CONADESUCA": df["CONADESUCA"] == "Si",
+    "8 OREF": df["OCHO_ENT"]== "Si",
+    "25 OREF": df["OCHO_ENT"]== "No",
+    "Reposición de tarjetas": df["reposición_tarjeta"] == "Si",
+    "Enviados a OREF (corrección)": df["enviados_incongruencias"] == "Si",
+}
+
+
+condicion = filtros.get(opcion)
+if condicion is not None:
+    df = df[condicion]
+
+with st.sidebar:
+    estados = st.multiselect(
+        "Seleccionar estados",
+        options=sorted(df["NOM_EDO_PROD"].dropna().unique()),
+        default=[],
+        placeholder="Todos los estados"
+    )
+
+
+# Guardar copia para el mapa
+df_para_mapa = df.copy()
+# estados_seleccionados = estados if len(estados) > 0 else None
+
+if len(estados) > 0:
+    df = df[df["NOM_EDO_PROD"].isin(estados)]
+
+# Meta - protección contra DataFrame vacío
+meta = df['Personas'].sum() if len(df) > 0 else 0
+
+# Filtro por fecha
+if len(df) > 0:
+    inicio = df["dia"].min().date() if pd.notna(df["dia"].min()) else datetime.date(2025, 12, 3)
+    fin = df["dia"].max().date() if pd.notna(df["dia"].max()) else datetime.date.today()
+else:
+    inicio = datetime.date(2025, 12, 3)
+    fin = datetime.date.today()
+
+with st.sidebar:
+    clave_dinamica_ini = f"fecha_ini_{inicio}_{opcion}_{len(estados)}"
+    clave_dinamica_fin = f"fecha_fin_{fin}_{opcion}_{len(estados)}"
+
+    fecha_ini = st.date_input(
+        "Fecha de inicio",
+        value=inicio,
+        format="DD/MM/YYYY",
+        key=clave_dinamica_ini
+    )
+    fecha_fin = st.date_input(
+        "Fecha de fin",
+        value=fin,
+        format="DD/MM/YYYY",
+        key=clave_dinamica_fin
+    )
+
+if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin != "":
+    if len(df) > 0:
+        df = df[
+            ((df["dia"] >= pd.to_datetime(fecha_ini)) &
+            (df["dia"] <= pd.to_datetime(fecha_fin))) |
+            (df["dia"].isna())
+        ]
+    if len(df_para_mapa) > 0:
+        df_para_mapa = df_para_mapa[
+            ((df_para_mapa["dia"] >= pd.to_datetime(fecha_ini)) &
+            (df_para_mapa["dia"] <= pd.to_datetime(fecha_fin))) |
+            (df_para_mapa["dia"].isna())
+        ]
 
 
 
-    with st.sidebar:
-        clave_dinamica_ini = f"fecha_ini_{inicio}_{opcion}_{len(estados)}"
-        clave_dinamica_fin = f"fecha_fin_{fin}_{opcion}_{len(estados)}"
+# ═══════════════════════════════════════════════════════════════════════════════
+# KPIs
+# ═══════════════════════════════════════════════════════════════════════════════
 
-        fecha_ini = st.date_input(
-            "Fecha de inicio",
-            value=inicio,
-            format="DD/MM/YYYY",
-            key=clave_dinamica_ini
-        )
-        fecha_fin = st.date_input(
-            "Fecha de fin",
-            value=fin,
-            format="DD/MM/YYYY",
-            key=clave_dinamica_fin
-        )
+actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
+pendientes = meta - actualizados
+pct_avance = actualizados / meta * 100 if meta > 0 else 0
+pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas'].sum() if len(df) > 0 else 0) / actualizados * 100 if actualizados > 0 else 0
+actualizados_ultima_semana = df.loc[df['semana'] == df['semana'].max(), 'Personas'].sum()
+actualizados_ultima_semana_pct = actualizados_ultima_semana/meta*100 if meta > 0 else 0
 
-    if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin != "":
-        if len(df) > 0:
-            df = df[
-                ((df["dia"] >= pd.to_datetime(fecha_ini)) &
-                (df["dia"] <= pd.to_datetime(fecha_fin))) |
-                (df["dia"].isna())
-            ]
-        if len(df_para_mapa) > 0:
-            df_para_mapa = df_para_mapa[
-                ((df_para_mapa["dia"] >= pd.to_datetime(fecha_ini)) &
-                (df_para_mapa["dia"] <= pd.to_datetime(fecha_fin))) |
-                (df_para_mapa["dia"].isna())
-            ]
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Meta de personas para actualización", f"{meta:,.0f}", "100%")
+with col2:
+    st.metric("Personas actualizadas", f"{actualizados:,.0f}", f"{pct_avance:.1f}%")
+with col3:
+    st.metric("Personas Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # KPIs
-    # ═══════════════════════════════════════════════════════════════════════════════
+if tipo == 'administrador' or tipo == 'ejecutivo':
+    col6, col4, col5 = st.columns(3)
+    with col6:
+        st.metric("Personas actualizadas esta semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
+    with col4:
+        st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
+    with col5:
+        st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
 
-    actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
-    pendientes = meta - actualizados
-    pct_avance = actualizados / meta * 100 if meta > 0 else 0
-    pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas'].sum() if len(df) > 0 else 0) / actualizados * 100 if actualizados > 0 else 0
+# ═══════════════════════════════════════════════════════════════════════════════
+# TABS PRINCIPALES
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric("Meta de actualización", f"{meta:,.0f}", "100%")
-
-    with col2:
-        st.metric("Personas actualizadas", f"{actualizados:,.0f}", f"{pct_avance:.1f}%")
-
-    with col3:
-        st.metric("Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
+tab_avance, tab_productivos, tab_perfil = st.tabs([
+    "Avance General",
+    "Aspectos productivos",
+    "Aspectos demográficos",
+])
 
 
-    if st.session_state['username'] == 'admin':
-        cl1, col4, cl2, col5, cl3 = st.columns([1,3,1,3,1])
-        with col4:
-            st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 1: AVANCE GENERAL
+# ═══════════════════════════════════════════════════════════════════════════════
 
-        with col5:
-            st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
+with tab_avance:
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TABS PRINCIPALES
-    # ═══════════════════════════════════════════════════════════════════════════════
-
-    tab_avance, tab_cambios, tab_perfil, tab_detalle = st.tabs([
-        "Avance General",
-        "Aspectos productivos",
-        "Aspectos demográficos",
-        "Concentrado de información"
+    tab_avance_estados, tab_avance_cader, tab_avance_resumen, tab_temporal = st.tabs([
+        "Por OREF",
+        "Por CADER",
+        "Resumen",
+        "Por Periodo",
     ])
 
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TAB 1: AVANCE GENERAL
-    # ═══════════════════════════════════════════════════════════════════════════════
+    with tab_avance_estados:
 
-    with tab_avance:
+        tab_barras_avance_est, tab_detalle_avance_est = st.tabs(["Gráfico", "Detalle"])
 
-        tab_mapa, tab_avance_estados, tab_temporal = st.tabs([
-            "Mapa de calor",
-            "Por Estado",
-            "Por Periodo"
-        ])
-
-        with tab_mapa:
-            fig_mapa = crear_mapa_calor(df_para_mapa, geojson_data, estados_seleccionados)
-            st.plotly_chart(fig_mapa, width='stretch')
-
-        with tab_avance_estados:
-            tab_barras_avance_est, tab_detalle_avance_est = st.tabs(["Barras", "Detalle"])
-
+        with tab_barras_avance_est:
             df_estado = df.groupby(["NOM_EDO_PROD", "ACTUALIZADO"])["Personas"].sum().reset_index()
-            df_total = df_estado.groupby("NOM_EDO_PROD")["Personas"].sum().reset_index()
-            df_total.columns = ["NOM_EDO_PROD", "Total"]
-            df_estado = df_estado.merge(df_total, on="NOM_EDO_PROD")
-            df_estado["Porcentaje"] = (df_estado["Personas"] / df_estado["Total"] * 100).round(1)
-            df_estado["Estatus"] = df_estado["ACTUALIZADO"].map({"Si": "actualizadas", "No": "pendientes"})
-
-            df_actualizado_e = df_estado[df_estado["Estatus"] == "actualizadas"].copy()
-            df_orden = pd.DataFrame({"NOM_EDO_PROD": df_total["NOM_EDO_PROD"].unique()})
-            df_orden = df_orden.merge(df_actualizado_e[["NOM_EDO_PROD", "Porcentaje"]], on="NOM_EDO_PROD", how="left").fillna(0)
-            orden_estados = df_orden.sort_values("Porcentaje", ascending=False)["NOM_EDO_PROD"].tolist()
-
-            color_map = {"actualizadas": "#235B4E", "pendientes": "#D4C19C"}
-
-            fig_estado = px.bar(
-                df_estado, x="NOM_EDO_PROD", y="Porcentaje", color="Estatus",
-                text=df_estado["Porcentaje"].apply(lambda x: f"{x:.1f}%"),
-                custom_data=["NOM_EDO_PROD", "Personas", "Porcentaje", "Estatus"],
-                color_discrete_map=color_map,
-                category_orders={"NOM_EDO_PROD": orden_estados, "Estatus": ["actualizadas", "pendientes"]},
-                barmode="stack",
-            )
-            fig_estado.update_traces(
-                textposition='inside', insidetextanchor='middle',
-                textfont=dict(size=22, color="white", family=FONT_FAMILY),
-                hovertemplate="<b>%{customdata[0]}:</b><br> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas %{customdata[3]} <extra></extra>"
-            )
-            if len(df_estado) <= 3:
-                bar_gap = 0.8
+            if df_estado["NOM_EDO_PROD"].nunique() == 1:
+                st.plotly_chart(crear_dona(df_estado[["ACTUALIZADO","Personas"]],f"Actualizados en {df_estado['NOM_EDO_PROD'].unique()[0]}".upper()))
             else:
-                bar_gap = 0.15
-
-            fig_estado.update_layout(
-                title=dict(text="Avance por Entidad Federativa", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)),
-                hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO),
-                xaxis=dict(title=dict(text="Entidad Federativa", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=11, color="black", family=FONT_FAMILY), tickangle=-45),
-                yaxis=dict(title=dict(text="Porcentaje (%)", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=16, color="black", family=FONT_FAMILY), range=[0, 115], ticksuffix="%", dtick=20),
-                bargap=bar_gap, height=600, template="plotly_white",
-                legend=dict(title=dict(text="Estatus", font=dict(size=16, color="black", family=FONT_FAMILY)), font=dict(size=16, family=FONT_FAMILY), orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-                margin=dict(l=50, t=80, r=30, b=130), uniformtext_minsize=9, uniformtext_mode='hide', paper_bgcolor="rgba(0,0,0,0)"
-            )
-
-            with tab_barras_avance_est:
-                st.plotly_chart(fig_estado, width='stretch')
-
+                st.plotly_chart(crear_barras_porcentaje(df_estado, "NOM_EDO_PROD", "ACTUALIZADO", "Personas", "Avance por OREF"), width='stretch')
+        
+        with tab_detalle_avance_est:
+            config_df_oref = {
+                "NOM_EDO_PROD": st.column_config.Column("OREF", width=150),
+                "Personas": st.column_config.NumberColumn("Meta", format="accounting", step=1),
+                "Personas_act": st.column_config.NumberColumn("Avance", format="accounting", step=1),
+                "pct_act": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01),
+                "Personas_meta_caña": st.column_config.NumberColumn("Meta CONADESUCA", format="accounting", step=1),
+                "Personas_act_caña": st.column_config.NumberColumn("Avance CONADESUCA", format="accounting", step=1),
+                "pct_caña": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01),
+                "Personas_meta_tarjetas": st.column_config.NumberColumn("Meta R. Tarjetas", format="accounting", step=1),
+                "Personas_act_tarjetas": st.column_config.NumberColumn("Avance R. Tarjetas", format="accounting", step=1),
+                "pct_tarjetas": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01)
+            }
+            cols = ["Etiqueta","NOM_EDO_PROD","Personas","Personas_act","pct_act","Personas_meta_caña","Personas_act_caña","pct_caña","Personas_meta_tarjetas","Personas_act_tarjetas","pct_tarjetas"]
+            df_oref=(df.assign(
+                Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"8 oref","25 oref"),
+                Personas_act=lambda x:x["Personas"].where(x["ACTUALIZADO"].eq("Si"),0),
+                Personas_meta_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si"),0),
+                Personas_act_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0),
+                Personas_meta_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si"),0),
+                Personas_act_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0))
+                .groupby(["Etiqueta","NOM_EDO_PROD"],dropna=False,as_index=False)[["Personas","Personas_act","Personas_meta_caña","Personas_act_caña","Personas_meta_tarjetas","Personas_act_tarjetas"]].sum()
+                .assign(
+                    pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
+                    pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
+                    pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0)
+                ).sort_values("pct_act",ascending=False)
+                )[cols]
             
-            with tab_detalle_avance_est:
-                # 1. Crear DataFrame pivoteado
-                df_estado_detalle = df_estado.pivot(index="NOM_EDO_PROD", columns="Estatus", values=["Personas", "Porcentaje"]).fillna(0)
-                # 3. Aplanar el MultiIndex de las columnas (Ej: ('Personas', 'actualizadas') -> 'Personas_actualizadas')
-                # df_estado_detalle.columns = [f"{col[0]}_{col[1]}" for col in df_estado_detalle.columns]
-                df_estado_detalle.columns = ["_".join(col).strip() for col in df_estado_detalle.columns.values]
-                # 4. Calcular la columna Total Personas (sumando solo las columnas que empiezan con 'Personas_')
-                columnas_personas = [col for col in df_estado_detalle.columns if col.startswith("Personas_")]
-                df_estado_detalle["Total_Personas"] = df_estado_detalle[columnas_personas].sum(axis=1)
-                # 5. Configurar columnas dinámicamente usando strings planos
-                config_columnas = {
-                    "NOM_EDO_PROD": st.column_config.Column("Entidad Federativa"),
-                    **{col: st.column_config.NumberColumn(f"{col.replace('_', ' ')}", format="accounting", step=1) for col in df_estado_detalle.columns if col.startswith("Personas_")},
-                    **{col: st.column_config.NumberColumn(f"{col.replace('_', ' ')}", format="%.1f%%", step=0.01) for col in df_estado_detalle.columns if col.startswith("Porcentaje_")},
-                    "Total_Personas": st.column_config.NumberColumn("Total Personas", format="accounting", step=1)
-                }
+            df_oref_totales=df_oref.sum(numeric_only=True).to_frame().T.assign(
+                NOM_EDO_PROD="TOTAL",Etiqueta=" ",
+                pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
+                pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
+                pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0)
+            )[cols]
 
-                # 6. Mostrar en Streamlit
-                st.dataframe(df_estado_detalle, width='stretch', column_config=config_columnas)
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF</span>", unsafe_allow_html=True)
+            st.dataframe(df_oref,width="stretch",column_config=config_df_oref, hide_index=True)
+            st.dataframe(df_oref_totales,width="stretch",column_config=config_df_oref, hide_index=True)
 
 
+    with tab_avance_cader:
+        if "NOM_EDO_PROD" in df.columns:
+            config_df_cader = {
+                "OREF": st.column_config.Column(width=150),
+                "DDR": st.column_config.Column(width=150),
+                "CADER": st.column_config.Column(width=150),
+                "Meta\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Avance\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
+            }
+            config_df_cader_totales = {
+                "OREF": st.column_config.Column(width=600),
+                "Meta\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Avance\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
+            }
+            df_cader = (df.assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
+                        .groupby(["NOM_EDO_PROD", "nombre_ddr_solicitud", "nombre_cader_solicitud",],dropna=False,as_index=False)[["Personas","avance"]]
+                        .sum().reset_index(drop=True)
+                        .assign(porcentaje=lambda x: (100 * x["avance"] / x["Personas"].sum()).round(2).fillna(0))
+                        .sort_values(["NOM_EDO_PROD","porcentaje"],ascending=False)
+                        .rename(columns={"NOM_EDO_PROD": "OREF", "nombre_ddr_solicitud": "DDR", "nombre_cader_solicitud": "CADER", "Personas": "Meta\n(personas)","avance": "Avance\n(personas)", "porcentaje": "Avance\n(%)"})
+                        )[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
 
-        with tab_temporal:
-            periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
+            df_cader_totales=df_cader.sum(numeric_only=True).to_frame().T.assign(OREF="TOTAL")[["OREF","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
 
-            df["dia"] = pd.to_datetime(df["dia"])
-            df_temp = df.dropna(subset=["dia"]).copy()
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF-DDR-CADER</span>", unsafe_allow_html=True)
+            st.dataframe(df_cader, column_config=config_df_cader, width='stretch', hide_index=True)
+            st.dataframe(df_cader_totales, column_config=config_df_cader_totales, width='stretch', hide_index=True)
+        else:
+            st.info("Columna 'NOM_EDO_PROD' no disponible.")
 
-            if len(df_temp) == 0:
-                st.info("No hay datos con fecha de captura para el periodo y filtros seleccionados.")
+    with tab_avance_resumen:
+        # ═══════════════════════════════════════════════════════════════════════════════
+        # TAB 4: DETALLE DE REGISTROS
+        # ═══════════════════════════════════════════════════════════════════════════════
+        st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Detalle General</span>", unsafe_allow_html=True)
+
+
+    with tab_temporal:
+        periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
+
+        df["dia"] = pd.to_datetime(df["dia"])
+        df_temp = df.dropna(subset=["dia"]).copy()
+
+        if len(df_temp) == 0:
+            st.info("No hay datos con fecha de captura para el periodo y filtros seleccionados.")
+        else:
+            if periodo == "Semanal":
+                df_agrupado = df_temp.groupby(df_temp["semana"].dt.strftime("%Y-%m-%d"))["Personas"].sum().reset_index().rename(columns={'semana': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
+                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                n = 7
             else:
-                if periodo == "Semanal":
-                    df_agrupado = df_temp.groupby(df_temp["semana"].dt.strftime("%Y-%m-%d"))["Personas"].sum().reset_index()
-                    df_agrupado.columns = ["Fecha", "Cantidad"]
-                else:
-                    df_agrupado = df_temp.groupby(df_temp["mes"])["Personas"].sum().reset_index()
-                    df_agrupado.columns = ["Fecha", "Cantidad"]
-                    periodo = "Mensual"
+                df_agrupado = df_temp.groupby(df_temp["mes"])["Personas"].sum().reset_index().rename(columns={'mes': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
+                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                periodo = "Mensual"
+                n = 12
 
-                df_filtrado = df_agrupado.copy()
-                total_personas = df_filtrado["Cantidad"].sum()
-                df_filtrado["Porcentaje"] = (df_filtrado["Cantidad"] / total_personas * 100).round(2) if total_personas > 0 else 0
-                df_filtrado["Acumulado"] = df_filtrado["Cantidad"].cumsum()
+            tab_acum, tab_barras_t, tab_detalle_a_t = st.tabs(["Acumulado", "Barras", "Detalle"])
 
-                tab_acum, tab_barras_t, tab_detalle_a_t = st.tabs(["Acumulado", "Barras", "Detalle"])
+            with tab_acum:
+                # 1. Creamos una lista para alternar la posición del texto y evitar que se encimen
+                st.plotly_chart(grafica_cumsum(df_agrupado[["Categoria","Personas"]],periodo="Categoria",titulo=f'Avance Acumulado {periodo}',n=n,height=550))
 
-                with tab_acum:
-                    # 1. Creamos una lista para alternar la posición del texto y evitar que se encimen
-                    fig_a = go.Figure()
-                    fig_a.add_trace(go.Scatter(
-                        x=df_filtrado["Fecha"], 
-                        y=df_filtrado["Acumulado"], 
-                        mode="lines+markers+text", 
-                        text=df_filtrado["Acumulado"].apply(lambda x: f"{x:,.0f}"), 
-                        textposition="top center", 
-                        # CLAVE 2: Permite que el texto se dibuje fuera de los límites del eje sin cortarse
-                        cliponaxis=False, 
-                        textfont=dict(size=13, color=GUINDA, family=FONT_FAMILY), 
-                        line=dict(color="#235B4E", width=3), 
-                        marker=dict(size=10, color="#235B4E", line=dict(color="white", width=2)), 
-                        fill="tozeroy", 
-                        fillcolor="rgba(35, 91, 78, 0.08)", 
-                        customdata=np.column_stack([df_filtrado["Fecha"], df_filtrado["Acumulado"], df_filtrado["Cantidad"]]), 
-                        hovertemplate="<b>%{customdata[0]}:</b> %{customdata[1]:,.0f}<br>personas actualizadas<br>(%{customdata[2]:,.0f} del periodo)<extra></extra>"
-                    ))
-                    fig_a.update_layout(
-                        title=dict(text=f"Acumulado {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), 
-                        hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), 
-                        
-                        xaxis=dict(
-                            tickangle=-45, 
-                            title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), 
-                            tickfont=dict(size=14, color="black", family=FONT_FAMILY)
-                        ), 
-                        
-                        yaxis=dict(
-                            title=dict(text="Personas acumuladas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), 
-                            tickfont=dict(size=14, color="black", family=FONT_FAMILY)
-                        ), 
-                        
-                        height=510, 
-                        template="plotly_white", 
-                        # CLAVE 3: Damos un margen derecho (r) e izquierdo (l) extra al contenedor general
-                        margin=dict(t=40, b=40, l=40, r=40), 
-                        paper_bgcolor="rgba(0,0,0,0)"
-                    )
-                    st.plotly_chart(fig_a, width='stretch')
+            with tab_barras_t:
+                st.plotly_chart(crear_barras(df_agrupado[["Categoria","Personas"]].tail(n),f"Avance {periodo}",colores_lista=[DORADO],height=500), width='stretch')
 
-                with tab_barras_t:
-                    fig_b = px.bar(df_filtrado, x="Fecha", y="Cantidad", text="Cantidad", custom_data=["Fecha", "Cantidad", "Porcentaje"], color_discrete_sequence=[DORADO])
-                    fig_b.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=14, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{customdata[0]}:</b> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas actualizadas<extra></extra>", marker_line_color="#52492E", marker_line_width=1.5, cliponaxis=False)
-                    fig_b.update_layout(title=dict(text=f"Avance {periodo}", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), hoverlabel=dict(font_size=18, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), xaxis=dict(title=dict(text="Periodo", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), tickangle=-45), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_filtrado["Cantidad"].max() * 1.25]), height=500, template="plotly_white", margin=dict(t=80, b=100), paper_bgcolor="rgba(0,0,0,0)", bargap=0.15)
-                    st.plotly_chart(fig_b, width='stretch')
+            with tab_detalle_a_t:
+                st.markdown(f"<span style='color: {GUINDA}; font-size: 20px; font-weight: bold;'>Detalle del avance {periodo}</span>", unsafe_allow_html=True)
+                st.dataframe(df_agrupado[["Categoria", "Personas", "Porcentaje","Acumulado"]]
+                            .sort_values(by="Categoria", ascending=False)
+                            .rename(columns={"Categoria": "Periodo", "Personas": "Personas actualizadas"}),
+                            column_config={"Porcentaje": st.column_config.NumberColumn(format="%.2f%%"),
+                                            "Personas actualizadas": st.column_config.NumberColumn(format="accounting",step=1),
+                                            "Acumulado": st.column_config.NumberColumn(format="accounting",step=1)},
+                            width='stretch',
+                            hide_index=True)
 
-                with tab_detalle_a_t:
-                    st.markdown(f"<span style='color: {GUINDA}; font-size: 20px; font-weight: bold;'>Detalle del avance {periodo}</span>", unsafe_allow_html=True)
-                    st.dataframe(df_filtrado[["Fecha", "Cantidad", "Porcentaje","Acumulado"]]
-                                .sort_values(by="Fecha", ascending=False)
-                                .rename(columns={"Fecha": "Periodo", "Cantidad": "Personas actualizadas"}),
-                                column_config={"Porcentaje": st.column_config.NumberColumn(format="%.2f%%"),
-                                                "Personas actualizadas": st.column_config.NumberColumn(format="accounting",step=1),
-                                                "Acumulado": st.column_config.NumberColumn(format="accounting",step=1)},
-                                width='stretch',
-                                hide_index=True)
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 2: ASPECTOS PRODUCTIVOS
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TAB 2: ANÁLISIS DE CAMBIOS
-    # ═══════════════════════════════════════════════════════════════════════════════
+with tab_productivos:
+    col1, col2 = st.columns(2)
+    columnas_c = [col1, col2]
+    variables_dona_1 = {
+        "Cambio_sup": "Cambio de Superficie",
+        "Cambio_cultivo": "Cambio de Cultivo",
+    }
 
-    with tab_cambios:
-        col1, col2 = st.columns(2)
-        columnas_c = [col1, col2]
-        variables_dona_1 = {
-            "Cambio_sup": "Cambio de Superficie",
-            "Cambio_cultivo": "Cambio de Cultivo",
-        }
-
-        for i, (variable, titulo) in enumerate(variables_dona_1.items()):
-            df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-            df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-            df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-            df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-            with columnas_c[i]:
-                tab_d, tab_w = st.tabs(["Dona", "Detalle"])
-                with tab_d:
-                    st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
-                with tab_w:
-                    st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-        col1, col2 = st.columns(2)
-        columnas_c3 = [col1, col2]
-        variables_dona_3 = {
-            "Grupo_Superficie": "Gropos de superficie",
-            "Estrategia_predominante": "Estrategia",
-        }
-
-        for i, (variable, titulo) in enumerate(variables_dona_3.items()):
-            df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-            df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-            df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-            df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-            with columnas_c3[i]:
-                tab_d, tab_w = st.tabs(["Dona", "Detalle"])
-                with tab_d:
-                    st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
-                with tab_w:
-                    st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-        col1, col2, col3 = st.columns(3)
-        columnas_c2 = [col1, col2, col3]
-        variables_dona_2 = {
-            "regimen_predominante": "Régimen hídrico",
-            "ciclo": "Ciclo productivo",
-            "tipo_posesion": "Tipo de Posesión"
-        }
-
-        for i, (variable, titulo) in enumerate(variables_dona_2.items()):
-            df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-            df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-            df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-            df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-            # colores_var = ["#235B4E", "#691C32", "#C29E5C"]
-            with columnas_c2[i]:
-                tab_d2, tab_w2 = st.tabs(["Dona", "Detalle"])
-                with tab_d2:
-                    st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
-                with tab_w2:
-                    st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-        df_dona = df.groupby("cultivo_predominante")["Personas"].sum().reset_index()
+    for i, (variable, titulo) in enumerate(variables_dona_1.items()):
+        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
         df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
         df_dona.columns = ["Categoria", "Personas","Porcentaje"]
         df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-        tab_d0, tab_w0 = st.tabs(["Dona", "Detalle"])
-        with tab_d0:
-            st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], "Cultivos", colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
-        with tab_w0:
-            st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Cultivo"), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+        with columnas_c[i]:
+            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
+            with tab_d:
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
+            with tab_w:
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TAB 3: PERFIL DEMOGRÁFICO
-    # ═══════════════════════════════════════════════════════════════════════════════
+    col1, col2 = st.columns(2)
+    columnas_c3 = [col1, col2]
+    variables_barras_3 = {
+        "Grupo_Superficie": "Grupos de superficie",
+        "Estrategia_predominante": "Estrategia",
+    }
 
-    with tab_perfil:
-        col1, col2 = st.columns(2)
+    for i, (variable, titulo) in enumerate(variables_barras_3.items()):
+        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+        with columnas_c3[i]:
+            tab_d, tab_w = st.tabs(["Dona", "Detalle"])
+            with tab_d:
+                st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
+            with tab_w:
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
-        df_coord = df.groupby("Estatus_coordenadas")["Personas"].sum().reset_index()
-        df_coord["Porcentaje"] = (df_coord["Personas"] / df_coord["Personas"].sum() * 100).round(2) if df_coord["Personas"].sum() > 0 else 0
-        df_coord.columns = ["Categoria", "Personas","Porcentaje"]
+    col1, col2, col3 = st.columns(3)
+    columnas_c2 = [col1, col2, col3]
+    variables_dona_2 = {
+        "regimen_predominante": "Régimen hídrico",
+        "ciclo": "Ciclo productivo",
+        "tipo_posesion": "Tipo de Posesión"
+    }
 
-        with col1:
-            tab_coord_dona, tab_coord_waffle = st.tabs(["Dona", "Detalle"])
-            with tab_coord_dona:
-                st.plotly_chart(crear_dona(df_coord[[ "Categoria","Personas" ]], "Estatus de coordenadas"), width='stretch')
-            with tab_coord_waffle:
-                st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por estatus de coordenadas</span>", unsafe_allow_html=True)
-                st.dataframe(df_coord, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Categoría"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%")})
+    for i, (variable, titulo) in enumerate(variables_dona_2.items()):
+        df_dona = df.groupby(variable)["Personas"].sum().reset_index()
+        df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+        df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+        df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+        # colores_var = ["#235B4E", "#691C32", "#C29E5C"]
+        with columnas_c2[i]:
+            tab_d2, tab_w2 = st.tabs(["Dona", "Detalle"])
+            with tab_d2:
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
+            with tab_w2:
+                st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
-        df_doc = df.groupby("EstatusDocProp")["Personas"].sum().reset_index()
-        df_doc["Porcentaje"] = (df_doc["Personas"] / df_doc["Personas"].sum() * 100).round(2) if df_doc["Personas"].sum() > 0 else 0
-        df_doc.columns = ["Categoria", "Personas","Porcentaje"]
+    df_dona = df.groupby("cultivo_predominante")["Personas"].sum().reset_index()
+    df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
+    df_dona.columns = ["Categoria", "Personas","Porcentaje"]
+    df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
+    tab_d0, tab_w0 = st.tabs(["Dona", "Detalle"])
+    with tab_d0:
+        st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], "Cultivos", colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
+    with tab_w0:
+        st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Cultivo"), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
-        with col2:
-            tab_doc_dona, tab_doc_waffle = st.tabs(["Dona", "Detalle"])
-            with tab_doc_dona:
-                st.plotly_chart(crear_dona(df_doc[[ "Categoria","Personas" ]], "Documento de posesión"), width='stretch')
-            with tab_doc_waffle:
-                st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por estatus de documento</span>", unsafe_allow_html=True)
-                st.dataframe(df_doc, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Categoría"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%")})
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 3: PERFIL DEMOGRÁFICO
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_perfil:
 
-        df_edad = df.groupby(["Ord_Grupos_Edad", "Grupos_Edad"])["Personas"].sum().reset_index()
-        df_edad = df_edad.sort_values("Ord_Grupos_Edad").reset_index(drop=True)
-        # total_personas_edad = df_edad["Personas"].sum()
-        df_edad["Porcentaje"] = (df_edad["Personas"] / df_edad["Personas"].sum() * 100).round(1) if df_edad["Personas"].sum() > 0 else 0
-        colores_edad = (PALETA_INSTITUCIONAL * 3)[:len(df_edad)]
+    df_edad = df.groupby(["Ord_Grupos_Edad", "Grupos_Edad"])["Personas"].sum().reset_index()
+    df_edad = df_edad.sort_values("Ord_Grupos_Edad").reset_index(drop=True)
+    # total_personas_edad = df_edad["Personas"].sum()
+    df_edad["Porcentaje"] = (df_edad["Personas"] / df_edad["Personas"].sum() * 100).round(1) if df_edad["Personas"].sum() > 0 else 0
+    df_edad.columns = ["Orden Categoria","Categoria", "Personas","Porcentaje"]
+    colores_edad = (PALETA_INSTITUCIONAL * 3)[:len(df_edad)]
 
-        col1_tap_perfil, col2_tap_perfil = st.columns(2)
+    col1_tap_perfil, col2_tap_perfil = st.columns(2)
 
-        with col1_tap_perfil:
-            tab_edad_barras, tab_edad_detalle = st.tabs(["Barras", "Detalle"])
+    with col1_tap_perfil:
+        tab_edad_barras, tab_edad_detalle = st.tabs(["Barras", "Detalle"])
 
-            with tab_edad_barras:
-                fig_edad_v = px.bar(df_edad, x="Grupos_Edad", y="Personas", text="Personas", color="Grupos_Edad", custom_data=["Grupos_Edad", "Personas", "Porcentaje"], color_discrete_sequence=colores_edad, category_orders={"Grupos_Edad": df_edad["Grupos_Edad"].tolist()})
-                fig_edad_v.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=13, color=VERDE, family=FONT_FAMILY), hovertemplate="<b>%{customdata[0]} años:</b> %{customdata[1]:,.0f} (%{customdata[2]:.1f}%)<br>personas actualizadas<extra></extra>", cliponaxis=False, marker_line_color="white", marker_line_width=1.5)
-                fig_edad_v.update_layout(title=dict(text="Distribución por Grupos de Edad", font=dict(size=FONT_SIZE_TITLE, color=GUINDA, family=FONT_FAMILY)), xaxis=dict(title=dict(text="Grupo de Edad", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickangle=-45, tickfont=dict(size=12, color="black", family=FONT_FAMILY)), yaxis=dict(title=dict(text="Personas", font=dict(size=FONT_SIZE_AXIS, color="black", family=FONT_FAMILY)), tickfont=dict(size=14, color="black", family=FONT_FAMILY), range=[0, df_edad["Personas"].max() * 1.25] if len(df_edad) > 0 else [0, 1]), hoverlabel=dict(font_size=14, font_family=FONT_FAMILY, bgcolor="white", font_color=VERDE, bordercolor=DORADO), showlegend=False, bargap=0.2, height=500, template="plotly_white", margin=dict(t=60, b=100, l=50, r=20), paper_bgcolor="rgba(0,0,0,0)")
-                st.plotly_chart(fig_edad_v, width='stretch')
+        with tab_edad_barras:
+            # st.plotly_chart(fig_edad_v, width='stretch')
+            st.plotly_chart(crear_barras(df_edad[["Categoria", "Personas"]], "Distribución por Grupos de Edad", colores_lista=colores_edad), width='stretch')
 
-            with tab_edad_detalle:
-                st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por grupos de edad</span>", unsafe_allow_html=True)
-                st.dataframe(df_edad[["Grupos_Edad", "Personas", "Porcentaje"]], width='stretch', hide_index=True, column_config={"Grupos_Edad": st.column_config.Column("Grupos de Edad"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
+        with tab_edad_detalle:
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 24px; font-weight: bold;'>Detalle por grupos de edad</span>", unsafe_allow_html=True)
+            st.dataframe(df_edad[["Categoria", "Personas", "Porcentaje"]], width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Grupos de Edad"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
 
-        with col2_tap_perfil:
-            dona_genero, detalle_genero = st.tabs(["Dona", "Detalle"])
+    with col2_tap_perfil:
+        dona_genero, detalle_genero = st.tabs(["Dona", "Detalle"])
 
-            df_genero = df.groupby("genero")["Personas"].sum().reset_index()
-            df_genero["Porcentaje"] = (df_genero["Personas"] / df_genero["Personas"].sum() * 100).round(2) if df_genero["Personas"].sum() > 0 else 0
-            df_genero.columns = ["Categoria", "Personas","Porcentaje"]
+        df_genero = df.groupby("genero")["Personas"].sum().reset_index()
+        df_genero["Porcentaje"] = (df_genero["Personas"] / df_genero["Personas"].sum() * 100).round(2) if df_genero["Personas"].sum() > 0 else 0
+        df_genero.columns = ["Categoria", "Personas","Porcentaje"]
 
-            with dona_genero:
-                st.plotly_chart(crear_dona(df_genero[["Categoria", "Personas"]], "Distribución por género", colores_lista=["#235B4E", "#691C32"]), width='stretch')
-            with detalle_genero:
-                st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por género</span>", unsafe_allow_html=True)
-                st.dataframe(df_genero, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Género"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # TAB 4: DETALLE DE REGISTROS
-    # ═══════════════════════════════════════════════════════════════════════════════
-
-    with tab_detalle:
-        separador("Detalle de Registros")
-
-        tab_cader, tab_documentos  = st.tabs(["Resumen por cader","Resumen por documentos de posesión/propiedad"])
-
-        with tab_cader:
-            if "NOM_EDO_PROD" in df.columns:
-                df_pivot = df.groupby(["NOM_EDO_PROD", "nombre_ddr_solicitud", "nombre_cader_solicitud"])[["Personas", "Registros"]].sum().reset_index().sort_values("NOM_EDO_PROD", ascending=False).reset_index(drop=True)
-                df_pivot = df_pivot.rename(columns={"NOM_EDO_PROD": "Entidad Federativa", "nombre_ddr_solicitud": "DDR", "nombre_cader_solicitud": "CADER"})
-
-                st.dataframe(df_pivot, width='stretch', hide_index=True)
-            else:
-                st.info("Columna 'NOM_EDO_PROD' no disponible.")
-
-        with tab_documentos:
-            df_doc = df.groupby(["clave_documento_propiedad","nombre_documento_propiedad","EstatusDocProp"])[["Personas","Registros"]].sum().reset_index().sort_values("Personas", ascending=False).reset_index(drop=True)
-            df_doc = df_doc.rename(columns={"clave_documento_propiedad": "Clave", "nombre_documento_propiedad": "Nombre Documento", "EstatusDocProp": "Estatus"})
-            st.dataframe(df_doc, width='stretch', hide_index=True)
-
-
-
-    # ═══════════════════════════════════════════════════════════════════════════════
-    # BOTÓN DE DESCARGA EN EL SIDEBAR
-    # ═══════════════════════════════════════════════════════════════════════════════
-    with st.sidebar:
-
-        st.markdown(f"""<br>Generar presentación""", unsafe_allow_html=True)
-
-        # 1. Inyectas el estilo CSS personalizado
-        st.markdown(f"""
-            <style>
-            div.stDownloadButton > button:first-child {{
-                background-color: {VERDE_CLARO}; /* Tu color de fondo (Verde) */
-                color: white;              /* Color del texto */
-                border: none;
-            }}
-            div.stDownloadButton > button:first-child:hover {{
-                background-color: {VERDE}; /* Color cuando pasas el mouse */
-                color: white;
-            }}
-                div.stButton > button:first-child {{
-                background-color: {VERDE_CLARO}; /* Tu color de fondo (Verde) */
-                color: white;              /* Color del texto */
-                border: none;
-            }}
-            div.stButton > button:first-child:hover {{
-                background-color: {VERDE}; /* Color cuando pasas el mouse */
-                color: white;
-            }}
-            </style>
-        """, unsafe_allow_html=True)
-
-        if st.button("Descargar informe", type="primary"):
-            st.toast("Procesando presentación", icon="⚙️")
-
-            from generar_archivo_pdf import generar_presentacion_pdf
-            # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
-            st.download_button(
-                label="Generar y Descargar PDF",
-                data=lambda: generar_presentacion_pdf(df, meta, actualizados, pendientes, pct_avance, hoy),
-                file_name=f"Presentacion_PROBIEN_{hoy}.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-                on_click=lambda: st.toast("¡Preparando descarga!", icon="📥")  # 👈 Mensaje flotante
-            )
+        with dona_genero:
+            st.plotly_chart(crear_dona(df_genero[["Categoria", "Personas"]], "Distribución por género", colores_lista=["#235B4E", "#691C32"]), width='stretch')
+        with detalle_genero:
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por género</span>", unsafe_allow_html=True)
+            st.dataframe(df_genero, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Género"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
 
 
-    # =============================================================================
-    # FOOTER
-    # =============================================================================
+    st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Documentos de posesión/propiedad</span>", unsafe_allow_html=True)
+    df_doc = df.groupby(["clave_documento_propiedad","EstatusDocProp","nombre_documento_propiedad"])[["Personas","Registros"]].sum().reset_index().sort_values("EstatusDocProp", ascending=True).reset_index(drop=True)
+    df_doc = df_doc.rename(columns={"clave_documento_propiedad": "Clave", "nombre_documento_propiedad": "Nombre Documento", "EstatusDocProp": "Estatus Documento"})
+    st.dataframe(df_doc, width='stretch', hide_index=True)
 
-    st.divider() # Una línea sutil para separar el contenido
-    with st.expander("Información Legal y de Privacidad"):
-        st.markdown(f"""
-        **Aviso de Uso Interno e Informativo**  
-        Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
-        Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.<br>
-        {st.secrets["password"] if "password" in st.secrets else "Nada"}
-        """, unsafe_allow_html=True)
+
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOTÓN DE DESCARGA EN EL SIDEBAR
+# ═══════════════════════════════════════════════════════════════════════════════
+with st.sidebar:
+
+    st.markdown(f"""<br>Generar presentación""", unsafe_allow_html=True)
+
+    if st.button("Descargar informe", type="primary"):
+        st.toast("Procesando presentación", icon="⚙️")
+
+        from generar_archivo_pdf import generar_presentacion_pdf
+        # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
+        st.download_button(
+            label="Generar y Descargar PDF",
+            data=lambda: generar_presentacion_pdf(df, meta, actualizados, pendientes, pct_avance, hoy),
+            file_name=f"Presentacion_PROBIEN_{hoy}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            on_click=lambda: st.toast("¡Preparando descarga!", icon="📥")  # 👈 Mensaje flotante
+        )
+
+
+# =============================================================================
+# FOOTER
+# =============================================================================
+
+st.divider() # Una línea sutil para separar el contenido
+with st.expander("Información Legal y de Privacidad"):
+    st.markdown(f"""
+    **Aviso de Uso Interno e Informativo**  
+    Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
+    Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.<br>
+    {st.secrets["password"] if "password" in st.secrets else "Nada"}
+    """, unsafe_allow_html=True)
