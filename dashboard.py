@@ -1316,23 +1316,25 @@ with tab_perfil:
 # ═══════════════════════════════════════════════════════════════════════════════
 # BOTÓN DE DESCARGA EN EL SIDEBAR
 # ═══════════════════════════════════════════════════════════════════════════════
-with st.sidebar:
 
-    st.markdown(f"""<br>Generar presentación""", unsafe_allow_html=True)
+if tipo == 'administrador':
+    with st.sidebar:
 
-    if st.button("Descargar informe", type="primary"):
-        st.toast("Procesando presentación", icon="⚙️")
+        st.markdown(f"""<br>Generar presentación""", unsafe_allow_html=True)
 
-        from generar_archivo_pdf import generar_presentacion_pdf
-        # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
-        st.download_button(
-            label="Generar y Descargar PDF",
-            data=lambda: generar_presentacion_pdf(df, meta, actualizados, pendientes, pct_avance, hoy),
-            file_name=f"Presentacion_PROBIEN_{hoy}.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-            on_click=lambda: st.toast("¡Preparando descarga!", icon="📥")  # 👈 Mensaje flotante
-        )
+        if st.button("Descargar informe", type="primary"):
+            st.toast("Procesando presentación", icon="⚙️")
+
+            from generar_archivo_pdf import generar_presentacion
+            # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
+            st.download_button(
+                label="Generar y Descargar PDF",
+                data=lambda: generar_presentacion(df, meta, actualizados, pendientes, pct_avance, hoy),
+                file_name=f"Presentacion_PROBIEN_{hoy}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                on_click=lambda: st.toast("¡Preparando descarga!", icon="📥")  # 👈 Mensaje flotante
+            )
 
 
 # =============================================================================
