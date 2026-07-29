@@ -1028,7 +1028,7 @@ with col3:
 if tipo == 'administrador' or tipo == 'ejecutivo':
     col6, col4, col5 = st.columns(3)
     with col6:
-        st.metric("Personas actualizadas esta semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
+        st.metric("Personas actualizadas en la última semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
     with col4:
         st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
     with col5:
