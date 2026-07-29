@@ -940,7 +940,7 @@ filtros = {
     "8 OREF": df["OCHO_ENT"]== "Si",
     "25 OREF": df["OCHO_ENT"]== "No",
     "Reposición de tarjetas": df["reposición_tarjeta"] == "Si",
-    "Enviados a OREF (corrección)": df["enviados_incongruencias"] == "Si",
+    # "Enviados a OREF (corrección)": df["enviados_incongruencias"] == "Si",
 }
 
 
@@ -951,7 +951,7 @@ if condicion is not None:
 with st.sidebar:
     estados = st.multiselect(
         "Seleccionar estados",
-        options=sorted(df["NOM_EDO_PROD"].dropna().unique()),
+        options=sorted(df["NOM_REP"].dropna().unique()),
         default=[],
         placeholder="Todos los estados"
     )
@@ -962,7 +962,7 @@ df_para_mapa = df.copy()
 # estados_seleccionados = estados if len(estados) > 0 else None
 
 if len(estados) > 0:
-    df = df[df["NOM_EDO_PROD"].isin(estados)]
+    df = df[df["NOM_REP"].isin(estados)]
 
 # Meta - protección contra DataFrame vacío
 meta = df['Personas'].sum() if len(df) > 0 else 0
@@ -1011,6 +1011,7 @@ if pd.notna(fecha_ini) and pd.notna(fecha_fin) and fecha_ini != "" and fecha_fin
 # ═══════════════════════════════════════════════════════════════════════════════
 # KPIs
 # ═══════════════════════════════════════════════════════════════════════════════
+df['semana'] = pd.to_datetime(df['semana'], errors='coerce')
 
 actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
 pendientes = meta - actualizados
@@ -1066,15 +1067,15 @@ with tab_avance:
         tab_barras_avance_est, tab_detalle_avance_est = st.tabs(["Gráfico", "Detalle"])
 
         with tab_barras_avance_est:
-            df_estado = df.groupby(["NOM_EDO_PROD", "ACTUALIZADO"])["Personas"].sum().reset_index()
-            if df_estado["NOM_EDO_PROD"].nunique() == 1:
-                st.plotly_chart(crear_dona(df_estado[["ACTUALIZADO","Personas"]],f"Actualizados en {df_estado['NOM_EDO_PROD'].unique()[0]}".upper()))
+            df_estado = df.groupby(["NOM_REP", "ACTUALIZADO"])["Personas"].sum().reset_index()
+            if df_estado["NOM_REP"].nunique() == 1:
+                st.plotly_chart(crear_dona(df_estado[["ACTUALIZADO","Personas"]],f"Actualizados en {df_estado['NOM_REP'].unique()[0]}".upper()))
             else:
-                st.plotly_chart(crear_barras_porcentaje(df_estado, "NOM_EDO_PROD", "ACTUALIZADO", "Personas", "Avance por OREF"), width='stretch')
+                st.plotly_chart(crear_barras_porcentaje(df_estado, "NOM_REP", "ACTUALIZADO", "Personas", "Avance por OREF"), width='stretch')
         
         with tab_detalle_avance_est:
             config_df_oref = {
-                "NOM_EDO_PROD": st.column_config.Column("OREF", width=150),
+                "NOM_REP": st.column_config.Column("OREF", width=150),
                 "Personas": st.column_config.NumberColumn("Meta", format="accounting", step=1),
                 "Personas_act": st.column_config.NumberColumn("Avance", format="accounting", step=1),
                 "pct_act": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01),
@@ -1085,7 +1086,7 @@ with tab_avance:
                 "Personas_act_tarjetas": st.column_config.NumberColumn("Avance R. Tarjetas", format="accounting", step=1),
                 "pct_tarjetas": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01)
             }
-            cols = ["Etiqueta","NOM_EDO_PROD","Personas","Personas_act","pct_act","Personas_meta_caña","Personas_act_caña","pct_caña","Personas_meta_tarjetas","Personas_act_tarjetas","pct_tarjetas"]
+            cols = ["Etiqueta","NOM_REP","Personas","Personas_act","pct_act","Personas_meta_caña","Personas_act_caña","pct_caña","Personas_meta_tarjetas","Personas_act_tarjetas","pct_tarjetas"]
             df_oref=(df.assign(
                 Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"8 oref","25 oref"),
                 Personas_act=lambda x:x["Personas"].where(x["ACTUALIZADO"].eq("Si"),0),
@@ -1093,7 +1094,7 @@ with tab_avance:
                 Personas_act_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0),
                 Personas_meta_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si"),0),
                 Personas_act_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0))
-                .groupby(["Etiqueta","NOM_EDO_PROD"],dropna=False,as_index=False)[["Personas","Personas_act","Personas_meta_caña","Personas_act_caña","Personas_meta_tarjetas","Personas_act_tarjetas"]].sum()
+                .groupby(["Etiqueta","NOM_REP"],dropna=False,as_index=False)[["Personas","Personas_act","Personas_meta_caña","Personas_act_caña","Personas_meta_tarjetas","Personas_act_tarjetas"]].sum()
                 .assign(
                     pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
                     pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
@@ -1102,7 +1103,7 @@ with tab_avance:
                 )[cols]
             
             df_oref_totales=df_oref.sum(numeric_only=True).to_frame().T.assign(
-                NOM_EDO_PROD="TOTAL",Etiqueta=" ",
+                NOM_REP="TOTAL",Etiqueta=" ",
                 pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
                 pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
                 pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0)
@@ -1114,7 +1115,7 @@ with tab_avance:
 
 
     with tab_avance_cader:
-        if "NOM_EDO_PROD" in df.columns:
+        if "NOM_REP" in df.columns:
             config_df_cader = {
                 "OREF": st.column_config.Column(width=150),
                 "DDR": st.column_config.Column(width=150),
@@ -1130,11 +1131,11 @@ with tab_avance:
                 "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
             }
             df_cader = (df.assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
-                        .groupby(["NOM_EDO_PROD", "nombre_ddr_solicitud", "nombre_cader_solicitud",],dropna=False,as_index=False)[["Personas","avance"]]
+                        .groupby(["NOM_REP", "NOM_DDR_PROD", "NOM_CAD_PROD",],dropna=False,as_index=False)[["Personas","avance"]]
                         .sum().reset_index(drop=True)
                         .assign(porcentaje=lambda x: (100 * x["avance"] / x["Personas"].sum()).round(2).fillna(0))
-                        .sort_values(["NOM_EDO_PROD","porcentaje"],ascending=False)
-                        .rename(columns={"NOM_EDO_PROD": "OREF", "nombre_ddr_solicitud": "DDR", "nombre_cader_solicitud": "CADER", "Personas": "Meta\n(personas)","avance": "Avance\n(personas)", "porcentaje": "Avance\n(%)"})
+                        .sort_values(["NOM_REP","porcentaje"],ascending=False)
+                        .rename(columns={"NOM_REP": "OREF", "NOM_DDR_PROD": "DDR", "NOM_CAD_PROD": "CADER", "Personas": "Meta\n(personas)","avance": "Avance\n(personas)", "porcentaje": "Avance\n(%)"})
                         )[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
 
             df_cader_totales=df_cader.sum(numeric_only=True).to_frame().T.assign(OREF="TOTAL")[["OREF","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
@@ -1143,7 +1144,7 @@ with tab_avance:
             st.dataframe(df_cader, column_config=config_df_cader, width='stretch', hide_index=True)
             st.dataframe(df_cader_totales, column_config=config_df_cader_totales, width='stretch', hide_index=True)
         else:
-            st.info("Columna 'NOM_EDO_PROD' no disponible.")
+            st.info("Columna 'NOM_REP' no disponible.")
 
     with tab_avance_resumen:
         # ═══════════════════════════════════════════════════════════════════════════════
