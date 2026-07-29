@@ -1051,11 +1051,11 @@ tab_avance, tab_productivos, tab_perfil = st.tabs([
 
 with tab_avance:
 
-    tab_avance_estados, tab_avance_cader, tab_avance_resumen, tab_temporal = st.tabs([
+    tab_avance_estados, tab_avance_cader, tab_temporal, tab_avance_resumen = st.tabs([
         "Por OREF",
         "Por CADER",
-        "Resumen",
         "Por Periodo",
+        "Resumen",
     ])
 
 
