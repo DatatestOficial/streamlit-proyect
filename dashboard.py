@@ -1347,6 +1347,6 @@ with st.expander("Información Legal y de Privacidad"):
     st.markdown(f"""
     **Aviso de Uso Interno e Informativo**  
     Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
-    Este software es de código abierto distribuido bajo la Licencia Apache 2.0. - Área de Estadística y Actualización.<br>
-    {st.secrets["password"] if "password" in st.secrets else "Nada"}
+    © Todos los derechos reservados - Área de Estadística y Actualización.<br>
+    
     """, unsafe_allow_html=True)
