@@ -5,13 +5,10 @@ import pandas as pd
 import numpy as np
 import polars as pl
 import base64
-import datetime
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from babel.dates import format_date
-from datetime import date
 import json
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN INICIAL
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -930,7 +927,7 @@ df = df[df["NOM_EDO_PROD"].isin(oref)]
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
-        opcion = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "CONADESUCA", "Reposición de tarjetas", "Enviados a OREF (corrección)"])
+        opcion = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "CONADESUCA", "Reposición de tarjetas"])
     else:
         opcion = None
 
@@ -969,8 +966,8 @@ meta = df['Personas'].sum() if len(df) > 0 else 0
 
 # Filtro por fecha
 if len(df) > 0:
-    inicio = df["dia"].min().date() if pd.notna(df["dia"].min()) else datetime.date(2025, 12, 3)
-    fin = df["dia"].max().date() if pd.notna(df["dia"].max()) else datetime.date.today()
+    inicio = df["dia"].min().date() if pd.notna(df["dia"].min()) else date(2025, 12, 3)
+    fin = df["dia"].max().date() if pd.notna(df["dia"].max()) else date.today()
 else:
     inicio = datetime.date(2025, 12, 3)
     fin = datetime.date.today()
@@ -1212,7 +1209,7 @@ with tab_productivos:
         with columnas_c[i]:
             tab_d, tab_w = st.tabs(["Dona", "Detalle"])
             with tab_d:
-                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch', key=f"dona_{titulo}")
             with tab_w:
                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
@@ -1252,7 +1249,7 @@ with tab_productivos:
         with columnas_c2[i]:
             tab_d2, tab_w2 = st.tabs(["Dona", "Detalle"])
             with tab_d2:
-                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
+                st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch', key=f"dona_{titulo}")
             with tab_w2:
                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
@@ -1299,7 +1296,7 @@ with tab_perfil:
         df_genero.columns = ["Categoria", "Personas","Porcentaje"]
 
         with dona_genero:
-            st.plotly_chart(crear_dona(df_genero[["Categoria", "Personas"]], "Distribución por género", colores_lista=["#235B4E", "#691C32"]), width='stretch')
+            st.plotly_chart(crear_dona(df_genero[["Categoria", "Personas"]], "Distribución por género", colores_lista=["#235B4E", "#691C32"]), width='stretch', key=f"dona_genero")
         with detalle_genero:
             st.markdown(f"<span style='color: {GUINDA}; font-size: 18px; font-weight: bold;'>Detalle por género</span>", unsafe_allow_html=True)
             st.dataframe(df_genero, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Género"), "Personas": st.column_config.NumberColumn("Personas actualizadas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje del total", format="%.2f %%", step=0.01)})
