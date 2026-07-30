@@ -420,12 +420,12 @@ def crear_barras_porcentaje(
         textfont=dict(size=22, color="white"),
         hovertemplate=(
             "<b>%{x}</b><br>"
-            "<b>Categoría:</b> %{customdata[1]}<br>"
-            "<b>Cantidad:</b> %{customdata[0]:,.0f}<br>"
+            # "<b>%{customdata[0]}:</b><br>"
+            # "%{value:,.0f} personas<br>"
             "<b>Porcentaje:</b> %{y:.1f}%"
             "<extra></extra>"
         ),
-        customdata=df_agrupado[[col_valores, col_color]].values
+        customdata=df_agrupado[[col_valores]].values
     )
 
     v_bargap = 0.6 if df_agrupado[col_x].nunique() <= 4 else 0.15
@@ -455,6 +455,13 @@ def crear_barras_porcentaje(
             range=[0, 110],
             ticksuffix="%",
             tickfont=dict(size=18, family=FONT_FAMILY,color="black"),
+        ),
+        hoverlabel=dict(
+            font_size=18,
+            font_family=FONT_FAMILY,
+            bgcolor="white",
+            font_color=VERDE,
+            bordercolor=DORADO,
         ),
         legend=dict(
             title=dict(
@@ -562,7 +569,7 @@ def grafica_cumsum(
             hovertemplate=(
                 "<b>%{x}</b><br>"
                 "Acumulado: %{y:,.0f}<br>"
-                "Periodo: %{customdata:,.0f} personas"
+                "Del periodo: %{customdata:,.0f} personas"
                 "<extra></extra>"
             ),
         )
@@ -596,10 +603,13 @@ def grafica_cumsum(
         margin=dict(l=60, r=60, t=45, b=20),
 
         hoverlabel=dict(
+            font_size=18,
+            font_family=FONT_FAMILY,
             bgcolor="white",
-            font_size=16,
-            font_family=FONT_FAMILY
+            font_color=VERDE,
+            bordercolor=DORADO,
         ),
+
 
         xaxis=dict(
             title=" ",
@@ -918,12 +928,11 @@ username = st.session_state["username"]
 tipo = st.secrets["auth"]["credentials"]["usernames"][username].get("tipo") if username in st.secrets['auth']['credentials']['usernames'] else "operativo"
 oref = st.secrets["auth"]["credentials"]["usernames"][username].get("oref") if username in st.secrets['auth']['credentials']['usernames'] else []
 
-df = df[df["NOM_EDO_PROD"].isin(oref)]
+df = df[df["CVE_REP_PROD"].isin(oref)]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SIDEBAR - FILTROS
 # ═══════════════════════════════════════════════════════════════════════════════
-
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
