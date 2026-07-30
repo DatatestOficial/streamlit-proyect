@@ -624,14 +624,24 @@ def grafica_cumsum(
         ),
 
         yaxis=dict(
-            title="Personas acumuladas",
+            title=dict(
+                text="Personas",
+                font=dict(
+                    family=FONT_FAMILY,      # La variable de tu fuente institucional
+                    size=22,                 # Tamaño de la letra del título
+                    color=titulo_color       # Color del título (puedes usar tus variables como titulo_color, #691C32, etc.)
+                )
+            ),                      
+            side="right",                       # Todo el componente al lado derecho
+            visible=True,                       
+            showticklabels=False,               # Oculta la escala de números
+            ticks="",                           # CORREGIDO: Elimina los pequeños rasgos/pestañas del eje
             gridcolor="rgba(0,0,0,.08)",
             gridwidth=1,
             range=[y_min, y_max + y_padding],
             autorange=False,
             zeroline=False,
             showline=False,
-            visible=False,
             tickfont=dict(
                 size=18,
                 family=FONT_FAMILY
