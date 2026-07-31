@@ -636,7 +636,8 @@ def grafica_cumsum(
             visible=True,                       
             showticklabels=False,               # Oculta la escala de números
             ticks="",                           # CORREGIDO: Elimina los pequeños rasgos/pestañas del eje
-            gridcolor="rgba(0,0,0,.08)",
+
+            gridcolor="rgba(0,0,0,0)",
             gridwidth=1,
             range=[y_min, y_max + y_padding],
             autorange=False,
@@ -1170,7 +1171,7 @@ with tab_avance:
 
 
     with tab_temporal:
-        periodo = st.segmented_control("Periodo:", options=["Semanal", "Mensual"], default="Mensual")
+        periodo = st.segmented_control("Periodo:", options=["Diario","Semanal", "Mensual"], default="Diario")
 
         df["dia"] = pd.to_datetime(df["dia"])
         df_temp = df.dropna(subset=["dia"]).copy()
@@ -1181,12 +1182,17 @@ with tab_avance:
             if periodo == "Semanal":
                 df_agrupado = df_temp.groupby(df_temp["semana"].dt.strftime("%Y-%m-%d"))["Personas"].sum().reset_index().rename(columns={'semana': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
                     Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
-                n = 7
-            else:
+                n = 5
+            elif  periodo == "Mensual":
                 df_agrupado = df_temp.groupby(df_temp["mes"])["Personas"].sum().reset_index().rename(columns={'mes': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
                     Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
                 periodo = "Mensual"
-                n = 12
+                n = 6
+            else:
+                df_agrupado = df_temp.groupby(df_temp["dia"].dt.strftime("%Y-%m-%d"))["Personas"].sum().reset_index().rename(columns={'dia': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
+                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                n = 7
+                periodo = "Diario"
 
             tab_acum, tab_barras_t, tab_detalle_a_t = st.tabs(["Acumulado", "Barras", "Detalle"])
 
