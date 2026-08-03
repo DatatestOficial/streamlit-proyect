@@ -1037,22 +1037,15 @@ pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas
 actualizados_ultima_semana = df.loc[df['semana'] == df['semana'].max(), 'Personas'].sum()
 actualizados_ultima_semana_pct = actualizados_ultima_semana/meta*100 if meta > 0 else 0
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.metric("Meta de personas para actualización", f"{meta:,.0f}", "100%")
 with col2:
     st.metric("Personas actualizadas", f"{actualizados:,.0f}", f"{pct_avance:.1f}%")
 with col3:
     st.metric("Personas Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
-
-if tipo == 'administrador' or tipo == 'ejecutivo':
-    col6, col4, col5 = st.columns(3)
-    with col6:
-        st.metric("Personas actualizadas en la última semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
-    with col4:
-        st.metric("Monto pagado para actualizados", f"${df['Pagados_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_pago*pct_avance/100:.1f}%")
-    with col5:
-        st.metric("Monto estimado para actualizados", f"${df['Monto_est_2026'].sum():,.0f}" if len(df) > 0 else "N/A", f"{pct_avance:.1f}%")
+with col4:
+    st.metric("Personas actualizadas en la última semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TABS PRINCIPALES
