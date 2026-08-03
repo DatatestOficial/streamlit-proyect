@@ -1045,7 +1045,7 @@ with col2:
 with col3:
     st.metric("Personas Pendientes de actualizar", f"{pendientes:,.0f}", f"{100 - pct_avance:.1f}%", delta_color="inverse")
 with col4:
-    st.metric("Personas actualizadas en la última semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.3f}%")
+    st.metric("Personas actualizadas en la última semana",f"{actualizados_ultima_semana:,.0f}"if not df.empty else "N/A",f"{actualizados_ultima_semana_pct:.1f}%")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TABS PRINCIPALES
@@ -1361,7 +1361,7 @@ st.divider() # Una línea sutil para separar el contenido
 with st.expander("Información Legal y de Privacidad"):
     st.markdown(f"""
     **Aviso de Uso Interno e Informativo**  
-    Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Estadística y Actualización, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
-    © Todos los derechos reservados - Área de Estadística y Actualización.<br>
+    Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Actualización y Estadística, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
+    © Todos los derechos reservados - Área de Actualización y Estadística.<br>
     
     """, unsafe_allow_html=True)
