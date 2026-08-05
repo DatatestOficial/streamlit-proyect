@@ -1033,7 +1033,6 @@ df['semana'] = pd.to_datetime(df['semana'], errors='coerce')
 actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
 pendientes = meta - actualizados
 pct_avance = actualizados / meta * 100 if meta > 0 else 0
-# pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas'].sum() if len(df) > 0 else 0) / actualizados * 100 if actualizados > 0 else 0
 actualizados_ultima_semana = df.loc[df['semana'] == df['semana'].max(), 'Personas'].sum()
 actualizados_ultima_semana_pct = actualizados_ultima_semana/meta*100 if meta > 0 else 0
 
