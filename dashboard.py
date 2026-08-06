@@ -1270,7 +1270,7 @@ with tab_productivos:
             with tab_w2:
                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
 
-    df_dona = df.groupby("cultivo_predominante")["Personas"].sum().reset_index()
+    df_dona = df.groupby("cultivo")["Personas"].sum().reset_index()
     df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
     df_dona.columns = ["Categoria", "Personas","Porcentaje"]
     df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
