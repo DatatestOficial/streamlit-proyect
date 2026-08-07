@@ -1362,5 +1362,4 @@ with st.expander("Información Legal y de Privacidad"):
     **Aviso de Uso Interno e Informativo**  
     Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Actualización y Estadística, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
     © Todos los derechos reservados - Área de Actualización y Estadística.<br>
-    
     """, unsafe_allow_html=True)
