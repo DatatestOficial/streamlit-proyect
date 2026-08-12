@@ -1678,7 +1678,7 @@ def agregar_forma(
 
 
 hoy = datetime.now(ZoneInfo("America/Mexico_City"))
-prs = Presentation("plantilla.pptx")
+# prs = Presentation("plantilla.pptx")
 
 # df = pl.read_parquet("concentrado_actualizados.parquet").to_pandas()
 # print(df.columns)
@@ -2313,6 +2313,7 @@ def descargar_presentacion(oref_asignada= []):
     if not oref_asignada:
         return
 
+    prs = Presentation("plantilla.pptx")
     for oref in oref_asignada:
 
         datos_oref = cargar_datos(f"""
