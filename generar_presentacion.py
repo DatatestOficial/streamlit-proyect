@@ -2310,11 +2310,20 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 # where = "WHERE " + " AND ".join([oref_asignada])
 @st.cache_data
 def descargar_presentacion(oref_asignada= []):
-    if not oref_asignada:
-        return
 
     prs = Presentation("plantilla.pptx")
-    for oref in oref_asignada:
+
+    oref_con_avance = cargar_datos(f"""
+        SELECT DISTINCT "CVE_REP_PROD" FROM concentrado 
+        WHERE "CVE_REP_PROD" = ANY(%s) AND "ACTUALIZADO" = 'Si'
+        ORDER BY "CVE_REP_PROD";
+    """,[oref_asignada])["CVE_REP_PROD"].tolist()
+    print(oref_asignada, oref_con_avance)
+
+    if not oref_con_avance:
+        return
+
+    for oref in oref_con_avance:
 
         datos_oref = cargar_datos(f"""
         SELECT
@@ -2328,9 +2337,11 @@ def descargar_presentacion(oref_asignada= []):
         """).iloc[0]
 
         # Filtrar datos de la OREF actual
-        oref_nombre, avance_oref, total_personas, avance_pct_oref = datos_oref
+        oref_nombre, total_personas, avance_oref,  avance_pct_oref = datos_oref
+        print(total_personas, avance_oref, avance_pct_oref)
 
-    #     # Crear diapositiva
+
+        # Crear diapositiva
         slide_s2h1 = prs.slides.add_slide(prs.slide_layouts[17])
 
         slide_s2h1.shapes.title.text = (
