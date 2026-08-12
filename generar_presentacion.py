@@ -2318,7 +2318,6 @@ def descargar_presentacion(oref_asignada= []):
         WHERE "CVE_REP_PROD" = ANY(%s) AND "ACTUALIZADO" = 'Si'
         ORDER BY "CVE_REP_PROD";
     """,[oref_asignada])["CVE_REP_PROD"].tolist()
-    print(oref_asignada, oref_con_avance)
 
     if not oref_con_avance:
         return
