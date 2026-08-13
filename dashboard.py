@@ -197,138 +197,6 @@ def crear_barras(df_barras, titulo, colores_lista=None, height=480):
 
     return fig
 
-# def crear_dona(
-#     df,
-#     titulo="",
-#     colores_lista=None,
-#     height=580,
-#     font_size_labels=20,
-#     hole=0.45,
-#     add_text_center = True,
-# ):
-#     """
-#     Dona con etiquetas internas.
-
-#     DataFrame esperado:
-#         Columna 0 -> Categoría
-#         Columna 1 -> Valor
-
-#     Ejemplos:
-#         df[['Sexo','Personas']]
-#         df[['Edad','Personas']]
-#         df[['Escolaridad','Personas']]
-#     """
-
-#     if df is None or df.empty or len(df.columns) < 2:
-#         return px.pie(title="Sin datos")
-
-#     if colores_lista is None:
-#         colores_lista = PALETA_INSTITUCIONAL
-
-#     df = df.iloc[:, :2].copy()
-
-#     col_categoria = df.columns[0]
-#     col_valor = df.columns[1]
-#     total = df[col_valor].sum()
-
-#     # Etiquetas de 3 líneas
-#     df["Etiqueta"] = df.apply(
-#         lambda r: (
-#             f"<b>{r[col_categoria]}</b><br>"
-#             f"({r[col_valor]/total:.1%})"
-#         ),
-#         axis=1,
-#     )
-
-#     fig = px.pie(
-#         df,
-#         values=col_valor,
-#         names="Etiqueta",
-#         hole=hole,
-#         color_discrete_sequence=colores_lista[:len(df)],
-#     )
-
-#     # Total central
-#     if add_text_center:
-#         fig.add_annotation(
-#             x=0.5,
-#             y=0.5,
-#             showarrow=False,
-#             text=f"<b>{total:,.0f}</b><br>personas",
-#             font=dict(
-#                 size=FONT_SIZE_TITLE,
-#                 color=GUINDA,
-#                 family=FONT_FAMILY
-#             ),
-#         )
-
-#     fig.update_traces(
-#         textposition="inside",
-#         textinfo="value+percent",
-#         textfont=dict(
-#             size=font_size_labels,
-#             color="white",
-#             family=FONT_FAMILY,
-#         ),
-#         # insidetextorientation="horizontal",
-#         marker=dict(
-#             line=dict(
-#                 color="white",
-#                 width=2
-#             )
-#         ),
-#         customdata=df[[col_categoria]],
-#         hovertemplate=(
-#             "<b>%{customdata[0]}:</b><br>"
-#             "%{value:,.0f} personas<br>"
-#             "%{percent}"
-#             "<extra></extra>"
-#         ),
-#     )
-
-#     fig.update_layout(
-#         title=dict(
-#             text=titulo,
-#             x=0.5,
-#             xanchor="center",
-#             font=dict(
-#                 size=FONT_SIZE_TITLE,
-#                 color=GUINDA,
-#                 family=FONT_FAMILY,
-#             ),
-#         ),
-#         hoverlabel=dict(
-#             font_size=font_size_labels,
-#             font_family=FONT_FAMILY,
-#             bgcolor="white",
-#             font_color=VERDE,
-#             bordercolor=DORADO,
-#         ),
-#         legend=dict(
-#             font=dict(
-#                 size=20,
-#                 family=FONT_FAMILY
-#             ),
-#             orientation="h",
-#             yanchor="top",
-#             y=-0.10,
-#             xanchor="center",
-#             x=0.5,
-#         ),
-#         height=height,
-#         margin=dict(
-#             t=70,
-#             b=60,
-#             l=20,
-#             r=20,
-#         ),
-#         showlegend=True,
-#         paper_bgcolor="rgba(0,0,0,0)",
-#         uniformtext_minsize=12,
-#     )
-
-#     return fig
-
 def crear_dona(
     df,
     titulo="",
@@ -1110,7 +978,6 @@ oref_asignada = st.secrets["auth"]["credentials"]["usernames"][username].get("or
 if oref_asignada:
     condiciones = ['"CVE_REP_PROD" = ANY(%s)']
     parametros=[oref_asignada]
-    parametros_oref=[oref_asignada]
 
 # # ═══════════════════════════════════════════════════════════════════════════════
 # # SIDEBAR - FILTROS
@@ -1119,7 +986,7 @@ if oref_asignada:
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
-        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "Primera Fase", "Segunda Fase", "CONADESUCA", "Reposición de tarjetas"])
+        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "CONADESUCA", "Reposición de tarjetas"])
     else:
         proceso = None
 
@@ -1137,6 +1004,7 @@ elif proceso == "Reposición de tarjetas":
     parametros.append(["Si"])
 else:
     pass
+
 where = "WHERE " + " AND ".join(condiciones)
 query_rep = f"""SELECT DISTINCT "NOM_REP" FROM concentrado {where};"""
 
@@ -1154,11 +1022,13 @@ with st.sidebar:
 if len(filtro_rep)>0:
     condiciones.append('"NOM_REP" = ANY(%s)')
     parametros.append(filtro_rep)
-    parametros_oref.append(filtro_rep) 
-where_oref = "WHERE " + " AND ".join(condiciones)
 
+where_oref ="WHERE " + " AND ".join(condiciones)
+parametros_oref = list(parametros)
 # Seleccionar fecha para filtro
+
 query_rep = f"""SELECT MIN("dia"),MAX("dia") FROM concentrado {where_oref};"""
+
 inicio, fin = cargar_datos(query_rep, parametros_oref).iloc[0]
 inicio = inicio if pd.notna(inicio) else date(2025, 12, 3)
 fin = fin if pd.notna(fin) else date.today()
@@ -1192,11 +1062,15 @@ where = "WHERE " + " AND ".join(condiciones)
 # ═══════════════════════════════════════════════════════════════════════════════
 # KPIs
 # ═══════════════════════════════════════════════════════════════════════════════
-meta = cargar_datos(f"""SELECT sum("Personas") FROM concentrado {where_oref};""",parametros_oref).fillna(0).iloc[0,0]
-actualizados = cargar_datos(f"""SELECT sum("Personas") FROM concentrado {where} AND "ACTUALIZADO" = 'Si';""",parametros).fillna(0).iloc[0,0]
+kpis = cargar_datos(f""" SELECT 
+    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' ), 0) AS "Avance",
+    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' AND "semana" = (SELECT MAX("semana") FROM concentrado) ), 0) AS "act_max_semana"
+    FROM concentrado  {where}
+""",parametros).fillna(0).astype('float64').iloc[0]
+meta = cargar_datos(f"""SELECT SUM("Personas") FROM concentrado  {where_oref}""",parametros_oref).fillna(0).astype('float64').iloc[0,0]
+actualizados, actualizados_ultima_semana = kpis
 pendientes = meta - actualizados
-pct_avance = actualizados / meta * 100 if meta > 0 else 0
-actualizados_ultima_semana = cargar_datos(f"""SELECT sum("Personas") AS "Personas" FROM concentrado {where} AND "semana" = (SELECT MAX("semana") FROM concentrado);""",parametros).fillna(0).iloc[0,0]
+pct_avance = actualizados/meta*100 if meta > 0 else 0
 actualizados_ultima_semana_pct = actualizados_ultima_semana/meta*100 if meta > 0 else 0
 
 col1, col2, col3, col4 = st.columns(4)
@@ -1271,17 +1145,17 @@ with tab_avance:
                 Personas_act_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0))
                 .groupby(["Etiqueta","NOM_REP"],dropna=False,as_index=False)[["Personas","Personas_act","Personas_meta_caña","Personas_act_caña","Personas_meta_tarjetas","Personas_act_tarjetas"]].sum()
                 .assign(
-                    pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
-                    pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
-                    pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0)
+                    pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0).astype('float64'),
+                    pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0).astype('float64'),
+                    pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0).astype('float64')
                 ).sort_values("pct_act",ascending=False)
                 )[cols]
             
             df_oref_totales=df_oref.sum(numeric_only=True).to_frame().T.assign(
                 NOM_REP="TOTAL",Etiqueta=" ",
-                pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0),
-                pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0),
-                pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0)
+                pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0).astype('float64'),
+                pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0).astype('float64'),
+                pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0).astype('float64')
             )[cols]
 
             st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF</span>", unsafe_allow_html=True)
@@ -1308,12 +1182,12 @@ with tab_avance:
                     .assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
                     .groupby(["NOM_REP", "NOM_DDR_PROD", "NOM_CAD_PROD",],dropna=False,as_index=False)[["Personas","avance"]]
                     .sum().reset_index(drop=True)
-                    .assign(porcentaje=lambda x: (100 * x["avance"] / x["Personas"]).round(2).fillna(0))
+                    .assign(porcentaje=lambda x: (100 * x["avance"] / x["Personas"]).round(2).fillna(0).astype('float64'))
                     .sort_values(["avance"],ascending=False)
                     .rename(columns={"NOM_REP": "OREF", "NOM_DDR_PROD": "DDR", "NOM_CAD_PROD": "CADER", "Personas": "Meta\n(personas)","avance": "Avance\n(personas)", "porcentaje": "Avance\n(%)"})
                     )[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
 
-        df_cader_totales=df_cader.sum(numeric_only=True).to_frame().T.assign(OREF="TOTAL",DDR="TOTAL",CADER="TOTAL",**{"Avance\n(%)": lambda x: (100 * x["Avance\n(personas)"] / x["Meta\n(personas)"]).round(2).fillna(0)})[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
+        df_cader_totales=df_cader.sum(numeric_only=True).to_frame().T.assign(OREF="TOTAL",DDR="TOTAL",CADER="TOTAL",**{"Avance\n(%)": lambda x: (100 * x["Avance\n(personas)"] / x["Meta\n(personas)"]).round(2).fillna(0).astype('float64')})[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
 
         st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF-DDR-CADER</span>", unsafe_allow_html=True)
         st.dataframe(df_cader, column_config=config_df_cader, width='stretch', hide_index=True)
@@ -1328,17 +1202,17 @@ with tab_avance:
             st.info("No hay datos con fecha de captura para el periodo y filtros seleccionados.")
         else:
             if periodo == "Semanal":
-                df_agrupado = df_temp.groupby(df_temp["semana"])["Personas"].sum().reset_index().rename(columns={'semana': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
-                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                df_agrupado = df_temp.groupby(df_temp["semana"])["Personas"].sum().reset_index().rename(columns={'semana': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0).astype('float64'),
+                    Acumulado = lambda x: x["Personas"].fillna(0).astype('float64').cumsum() )
                 n = 5
             elif  periodo == "Mensual":
-                df_agrupado = df_temp.groupby(df_temp["mes"])["Personas"].sum().reset_index().rename(columns={'mes': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
-                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                df_agrupado = df_temp.groupby(df_temp["mes"])["Personas"].sum().reset_index().rename(columns={'mes': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0).astype('float64'),
+                    Acumulado = lambda x: x["Personas"].fillna(0).astype('float64').cumsum() )
                 periodo = "Mensual"
                 n = 6
             else:
-                df_agrupado = df_temp.groupby(df_temp["dia"])["Personas"].sum().reset_index().rename(columns={'dia': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0),
-                    Acumulado = lambda x: x["Personas"].fillna(0).cumsum() )
+                df_agrupado = df_temp.groupby(df_temp["dia"])["Personas"].sum().reset_index().rename(columns={'dia': 'Categoria'}).sort_values("Categoria").assign(Porcentaje = lambda x: (x["Personas"]/x["Personas"].sum() * 100).round(2).fillna(0).astype('float64'),
+                    Acumulado = lambda x: x["Personas"].fillna(0).astype('float64').cumsum() )
                 periodo = "Diario"
                 n = 7
 
@@ -1370,14 +1244,14 @@ with tab_productivos:
     df_estrategia_ciclo_rh_tipo =f"""
     SELECT
         "Estrategia_predominante" AS "Estrategia predominante",
-        -- Ciclo
-        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PE'), 0) AS "Perenne",
-        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "OI",
-        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "PV",
         -- RH
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'TEMPORAL'), 0) AS "Temporal",
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'RIEGO'), 0) AS "Riego",
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'NO APLICA'), 0) AS "Sin régimen",
+        -- Ciclo
+        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PE'), 0) AS "Perenne",
+        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "OI",
+        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "PV",
         -- Posesión
         COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'PROPIA'), 0) AS "Posesión propia",
         COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'DERIVADA'), 0) AS "Posesión derivada",
@@ -1640,10 +1514,11 @@ with tab_Consultador:
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Consultador general</span>", unsafe_allow_html=True)
 
     columnas_elegidas = st.multiselect(
-        "Selecciona hasta 3 categorias:", 
+        "Opciones:", 
         options=columnas_nombres.values(), 
         max_selections=3,
         width=400,
+        placeholder="Selecciona hasta 3"
     )
 
     if columnas_elegidas:
@@ -1701,27 +1576,23 @@ with tab_Consultador:
 # #             )
 
 with st.sidebar:
-    if oref_asignada:
 
+    if oref_asignada:
+        version = (oref_asignada, fecha_datos)
         if st.button("📥 Preparar presentación"):
             with st.spinner("Generando presentación..."):
                 st.session_state["presentacion"] = descargar_presentacion(oref_asignada)
-
-            st.toast("¡Presentación preparada!", icon="✅")
-
-        if "presentacion" in st.session_state:
+                st.session_state["version"] = version
+        if (
+            st.session_state.get("presentacion") is not None
+            and st.session_state.get("version") == version
+        ):
             st.download_button(
-                label="Descargar",
+                "Descargar",
                 data=st.session_state["presentacion"],
                 file_name=f"{hoy} Reporte Actualización.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
-
-    else:
-        st.button(
-            "📥 Descargar presentación",
-            disabled=True
-        )
 
 # # =============================================================================
 # # FOOTER

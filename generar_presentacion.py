@@ -2337,12 +2337,8 @@ def descargar_presentacion(oref_asignada= []):
 
         # Filtrar datos de la OREF actual
         oref_nombre, total_personas, avance_oref,  avance_pct_oref = datos_oref
-        print(total_personas, avance_oref, avance_pct_oref)
-
-
         # Crear diapositiva
         slide_s2h1 = prs.slides.add_slide(prs.slide_layouts[17])
-
         slide_s2h1.shapes.title.text = (
             f"{oref_nombre}\n"
             f"Avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
