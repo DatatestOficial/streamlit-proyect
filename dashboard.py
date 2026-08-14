@@ -352,7 +352,6 @@ def crear_dona(
 
     return fig
 
-
 def crear_barras_porcentaje(
     df: pd.DataFrame,
     col_x: str,
@@ -957,6 +956,14 @@ def cargar_datos(query, parametros=None):
             columnas = [desc.name for desc in cur.description]
     return pd.DataFrame(filas, columns=columnas).reset_index(drop=True)
 
+@st.cache_data(ttl=30)
+def enviar_ingreso(username=None):
+    with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SET TIME ZONE 'America/Mexico_City'")
+            cur.execute("""UPDATE public.usuarios SET ultimo_ingreso = NOW() WHERE username = %s """, (username,))
+        conn.commit()
+
 fecha_datos =format_date(cargar_datos("""SELECT MAX("dia") FROM concentrado""").iloc[0, 0], format="d 'de' MMMM 'de' yyyy", locale="es")
 
 st.markdown(f"""
@@ -972,6 +979,7 @@ st.markdown(f"""
 # Definir usuarios y accesos
 # ═══════════════════════════════════════════════════════════════════════════════
 username = st.session_state["username"]
+enviar_ingreso(username)
 tipo = st.secrets["auth"]["credentials"]["usernames"][username].get("tipo") if username in st.secrets['auth']['credentials']['usernames'] else "operativo"
 oref_asignada = st.secrets["auth"]["credentials"]["usernames"][username].get("oref") if username in st.secrets['auth']['credentials']['usernames'] else []
 
@@ -1252,9 +1260,6 @@ with tab_productivos:
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PE'), 0) AS "Perenne",
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "OI",
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "PV",
-        -- Posesión
-        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'PROPIA'), 0) AS "Posesión propia",
-        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'DERIVADA'), 0) AS "Posesión derivada",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Estrategia predominante";
     """
@@ -1269,7 +1274,7 @@ with tab_productivos:
 
     st.dataframe(df_estrategia_ciclo_rh_tipo,column_config=df_estrategia_ciclo_rh_tipo_config,hide_index=True)
     if not df_estrategia_ciclo_rh_tipo.empty:
-        st.dataframe(df_estrategia_ciclo_rh_tipo.select_dtypes(include="number").sum().to_frame().T.assign(**{"Estrategia_predominante":"Total"}).iloc[:,[-1,*range(0,9)]], column_config=df_estrategia_ciclo_rh_tipo_config, hide_index=True)
+        st.dataframe(df_estrategia_ciclo_rh_tipo.select_dtypes(include="number").sum().to_frame().T.assign(**{"Estrategia_predominante":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_estrategia_ciclo_rh_tipo_config, hide_index=True)
 
     # Falta agregar titulos
     query_grupo_superficie_escala_cambios =f"""
@@ -1279,9 +1284,9 @@ with tab_productivos:
         COALESCE(SUM("Personas") FILTER (WHERE "escala" = 'Pequeña'), 0) AS "Pequeña escala",
         COALESCE(SUM("Personas") FILTER (WHERE "escala" = 'Mediana'), 0) AS "Mediana escala",
         -- Cambio Sup
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'A la baja'), 0) AS "Redujeron superficie",
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'Al alza'), 0) AS "Aumentaron superficie",
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'Se mantiene'), 0) AS "Mantienen superficie",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'A la baja'), 0) AS "Redujeron superficie",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'Al alza'), 0) AS "Aumentaron superficie",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_sup" = 'Se mantiene'), 0) AS "Mantienen superficie",
         -- Cambio_cultivo
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_cultivo" = 'Si'), 0) AS "Cambio cultivo(s)",
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_cultivo" = 'No'), 0) AS "Conserva cultivo(s)",
@@ -1289,9 +1294,12 @@ with tab_productivos:
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_regimen" = 'Si'), 0) AS "Cambio régimen",
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_regimen" = 'No'), 0) AS "Conserva régimen",
         -- Cambio_predios
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'A la baja'), 0) AS "Redujeron n° de predios",
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Al alza'), 0) AS "Aumentaron n° de predios",
-        COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Se mantiene'), 0) AS "Mantienen n° de predios",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'A la baja'), 0) AS "Redujeron n° de predios",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Al alza'), 0) AS "Aumentaron n° de predios",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Se mantiene'), 0) AS "Mantienen n° de predios",
+        -- Posesión
+        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'PROPIA'), 0) AS "Posesión propia",
+        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'DERIVADA'), 0) AS "Posesión derivada",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Grupo de superficie" ORDER BY "Total" DESC;
     """
@@ -1301,80 +1309,10 @@ with tab_productivos:
         col: st.column_config.NumberColumn(format="accounting",step=1)
         for col in df_grupo_superficie_escala_cambios.select_dtypes(include="number").columns
     }
-
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Personas actualizadas por grupo de superficie</span>", unsafe_allow_html=True)
     st.dataframe(df_grupo_superficie_escala_cambios,column_config=df_grupo_superficie_escala_cambios_config,hide_index=True)
     if not df_grupo_superficie_escala_cambios.empty:
-        st.dataframe(df_grupo_superficie_escala_cambios.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupo de superficie":"Total"}).iloc[:,[-1,*range(0,9)]], column_config=df_grupo_superficie_escala_cambios_config, hide_index=True)
-
-    # col1, col2 = st.columns(2)
-    # columnas_c = [col1, col2]
-    # variables_dona_1 = {
-    #     "Cambio_sup": "Cambio de Superficie",
-    #     "Cambio_cultivo": "Cambio de Cultivo",
-    # }
-
-    # for i, (variable, titulo) in enumerate(variables_dona_1.items()):
-    #     df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-    #     df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-    #     df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-    #     df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-    #     with columnas_c[i]:
-    #         tab_d, tab_w = st.tabs(["Dona", "Detalle"])
-    #         with tab_d:
-    #             st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo), width='stretch', key=f"dona_{titulo}")
-    #         with tab_w:
-    #             st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-#     col1, col2 = st.columns(2)
-#     columnas_c3 = [col1, col2]
-#     variables_barras_3 = {
-#         "Grupo_Superficie": "Grupos de superficie",
-#         "Estrategia_predominante": "Estrategia",
-#     }
-
-#     for i, (variable, titulo) in enumerate(variables_barras_3.items()):
-#         df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-#         df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-#         df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-#         df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-#         with columnas_c3[i]:
-#             tab_d, tab_w = st.tabs(["Dona", "Detalle"])
-#             with tab_d:
-#                 st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], titulo), width='stretch')
-#             with tab_w:
-#                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-#     col1, col2, col3 = st.columns(3)
-#     columnas_c2 = [col1, col2, col3]
-#     variables_dona_2 = {
-#         "regimen_predominante": "Régimen hídrico",
-#         "ciclo": "Ciclo productivo",
-#         "tipo_posesion": "Tipo de Posesión"
-#     }
-
-#     for i, (variable, titulo) in enumerate(variables_dona_2.items()):
-#         df_dona = df.groupby(variable)["Personas"].sum().reset_index()
-#         df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-#         df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-#         df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-#         # colores_var = ["#235B4E", "#691C32", "#C29E5C"]
-#         with columnas_c2[i]:
-#             tab_d2, tab_w2 = st.tabs(["Dona", "Detalle"])
-#             with tab_d2:
-#                 st.plotly_chart(crear_dona(df_dona[["Categoria", "Personas"]], titulo, colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch', key=f"dona_{titulo}")
-#             with tab_w2:
-#                 st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column(titulo), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
-
-#     df_dona = df.groupby("cultivo")["Personas"].sum().reset_index()
-#     df_dona["Porcentaje"] = (df_dona["Personas"] / df_dona["Personas"].sum() * 100).round(2) if df_dona["Personas"].sum() > 0 else 0
-#     df_dona.columns = ["Categoria", "Personas","Porcentaje"]
-#     df_dona = df_dona.sort_values("Personas", ascending=False).reset_index(drop=True)
-#     tab_d0, tab_w0 = st.tabs(["Dona", "Detalle"])
-#     with tab_d0:
-#         st.plotly_chart(crear_barras(df_dona[["Categoria", "Personas"]], "Cultivos", colores_lista=["#235B4E", "#691C32", "#C29E5C"]), width='stretch')
-#     with tab_w0:
-#         st.dataframe(df_dona, width='stretch', hide_index=True, column_config={"Categoria": st.column_config.Column("Cultivo"), "Personas": st.column_config.NumberColumn("Personas", format="accounting",step=1), "Porcentaje": st.column_config.NumberColumn("Porcentaje", format="%.2f %%", step=0.01)})
+        st.dataframe(df_grupo_superficie_escala_cambios.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupo de superficie":"Total"}).iloc[:,[-1,*range(0,5)]], column_config=df_grupo_superficie_escala_cambios_config, hide_index=True)
 
 
 # # ═══════════════════════════════════════════════════════════════════════════════
@@ -1454,11 +1392,7 @@ with tab_graficos:
         "Escala": "escala",
         "Tipo de posesión": "tipo_posesion",
         "Pueblo originario": "Pueblo_originario",
-        "Cambio de cultivo": "Cambio_cultivo",
-        "Cambio de superficie": "Cambio_sup",
-        "Cambio en n° de predios": "Cambio_predios",
-        "Cambio de régimen": "Cambio_regimen",
-
+        "Género": "genero",
     }
     items = list(categorias.items())
     for i in range(0, len(items), 3):
@@ -1486,17 +1420,16 @@ with tab_Consultador:
         "CONADESUCA": "CONADESUCA",
         "reposición_tarjeta": "Reposición de tarjeta",
         "Estatus_coordenadas": "Estatus de coordenadas",
-        "Ord_Grupos_Edad": "Orden grupo de edad",
         "Grupos_Edad": "Grupo de edad",
         "Pueblo_originario": "Pueblo originario",
-        "descripcion_pueblo": "Descripción del pueblo originario",
+        # "descripcion_pueblo": "Descripción del pueblo originario",
         "genero": "Género",
         "dia": "Día",
         "semana": "Semana",
         "mes": "Mes",
-        "clave_documento_propiedad": "Clave documento de propiedad",
-        "nombre_documento_propiedad": "Nombre documento de propiedad",
-        "EstatusDocProp": "Estatus documento de propiedad",
+        # "clave_documento_propiedad": "Clave documento de propiedad",
+        # "nombre_documento_propiedad": "Nombre documento de propiedad",
+        # "EstatusDocProp": "Estatus documento de propiedad",
         "Grupo_Superficie": "Grupo de superficie",
         "tipo_posesion": "Tipo de posesión",
         "cultivo_predominante": "Cultivo predominante",
@@ -1505,10 +1438,10 @@ with tab_Consultador:
         "regimen_predominante": "Régimen predominante",
         "ciclo": "Ciclo agrícola",
         "escala": "Escala",
-        "Cambio_sup": "Cambio de superficie",
-        "Cambio_cultivo": "Cambio de cultivo",
-        "Cambio_regimen": "Cambio de régimen",
-        "Cambio_predios": "Cambio de predios",
+        # "Cambio_sup": "Cambio de superficie",
+        # "Cambio_cultivo": "Cambio de cultivo",
+        # "Cambio_regimen": "Cambio de régimen",
+        # "Cambio_predios": "Cambio de predios",
     }
 
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Consultador general</span>", unsafe_allow_html=True)
@@ -1555,26 +1488,6 @@ with tab_Consultador:
 # # ═══════════════════════════════════════════════════════════════════════════════
 # # BOTÓN DE DESCARGA EN EL SIDEBAR
 # # ═══════════════════════════════════════════════════════════════════════════════
-
-# # if tipo == 'administrador':
-# #     with st.sidebar:
-
-# #         st.markdown(f"""<br>Generar presentación""", unsafe_allow_html=True)
-
-# #         if st.button("Descargar informe", type="primary"):
-# #             st.toast("Procesando presentación", icon="⚙️")
-
-# #             from generar_archivo_pdf import generar_presentacion
-# #             # 2. Tu botón (se pintará automáticamente con el CSS de arriba)
-# #             st.download_button(
-# #                 label="Generar y Descargar PDF",
-# #                 data=lambda: generar_presentacion(df, meta, actualizados, pendientes, pct_avance, hoy),
-# #                 file_name=f"Presentacion_PROBIEN_{hoy}.pdf",
-# #                 mime="application/pdf",
-# #                 use_container_width=True,
-# #                 on_click=lambda: st.toast("¡Preparando descarga!", icon="📥")  # 👈 Mensaje flotante
-# #             )
-
 with st.sidebar:
 
     if oref_asignada:
