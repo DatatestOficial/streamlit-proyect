@@ -2489,7 +2489,7 @@ def descargar_presentacion(oref_asignada= []):
             value_color=COLOR_VALOR,
         )
 
-        categoria = "Cambio_predios"
+        categoria = "Pueblo_originario"
         df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
@@ -2500,7 +2500,7 @@ def descargar_presentacion(oref_asignada= []):
             top=y,
             width=w,
             height=h,
-            title="Cambios en predios",
+            title="Pueblo originario",
             body_size=18,
             title_size=22,
             header_fill=COLOR_LAMINA,
@@ -2618,6 +2618,7 @@ def descargar_presentacion(oref_asignada= []):
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
+            show_text=False,
         )
 
         add_tarjeta_bullets(
@@ -2635,6 +2636,7 @@ def descargar_presentacion(oref_asignada= []):
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
+            show_text=False,
         )
     archivo_pptx = io.BytesIO()
     prs.save(archivo_pptx)

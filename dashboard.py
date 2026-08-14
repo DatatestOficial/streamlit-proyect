@@ -113,7 +113,9 @@ st.markdown(f"""
 # TÍTULO Y FECHA
 # ═══════════════════════════════════════════════════════════════════════════════
 # Obtiene la fecha actual usando la zona horaria de CDMX
-hoy = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%d-%m-%Y")
+# hoy = datetime.now(ZoneInfo("America/Mexico_City")).strftime("%d-%m-%Y")
+hoy = format_date(datetime.now(ZoneInfo("America/Mexico_City")).date(), format="d 'de' MMMM 'de' yyyy", locale="es")
+
 # hoy = date.today().strftime("%d-%m-%Y")
 
 def crear_barras(df_barras, titulo, colores_lista=None, height=480):
@@ -970,7 +972,7 @@ st.markdown(f"""
     <div style="line-height: 1;">
         <h3 style="margin-bottom: 0;">Actualización o Corroboración de Datos e Integración de Expedientes</h3>
         <p style="font-size: 1.2em; color: {AMARILLO}; margin-top: 0px; font-weight: bold;">
-            Información actualizada al <span style="color: {VERDE}; font-weight: bold;">{fecha_datos}</span> 
+            Reporte del {hoy} con Información actualizada al <span style="color: {VERDE}; font-weight: bold;">{fecha_datos}</span> 
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -1348,7 +1350,7 @@ with tab_perfil:
         st.dataframe(df_grupos_edad_genero.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupos de edad":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_grupos_edad_genero_config, hide_index=True)
 
 with tab_graficos:
-    st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Gráficos generales</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Gráficos generales de personas actualizadas</span>", unsafe_allow_html=True)
 
     tab_estrategia , tab_superficies, tab_edades = st.tabs(["Estrategia","Superficies","Edades"])
 
@@ -1490,12 +1492,18 @@ with tab_Consultador:
 # # ═══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
 
-    if oref_asignada:
-        version = (oref_asignada, fecha_datos)
+    if filtro_rep:
+        oref_pptx = cargar_datos("""SELECT DISTINCT "CVE_REP_PROD" FROM concentrado WHERE "NOM_REP" = ANY(%s)""",[filtro_rep])["CVE_REP_PROD"].tolist()
+    else: 
+        oref_pptx = oref_asignada
+
+    if oref_pptx:
+        version = (oref_pptx, fecha_datos)
         if st.button("📥 Preparar presentación"):
             with st.spinner("Generando presentación..."):
-                st.session_state["presentacion"] = descargar_presentacion(oref_asignada)
+                st.session_state["presentacion"] = descargar_presentacion(oref_pptx)
                 st.session_state["version"] = version
+                st.rerun()
         if (
             st.session_state.get("presentacion") is not None
             and st.session_state.get("version") == version
