@@ -982,8 +982,9 @@ st.markdown(f"""
 # ═══════════════════════════════════════════════════════════════════════════════
 username = st.session_state["username"]
 enviar_ingreso(username)
-tipo = st.secrets["auth"]["credentials"]["usernames"][username].get("tipo") if username in st.secrets['auth']['credentials']['usernames'] else "operativo"
-oref_asignada = st.secrets["auth"]["credentials"]["usernames"][username].get("oref") if username in st.secrets['auth']['credentials']['usernames'] else []
+
+tipo, oref_asignada = cargar_datos("""SELECT "tipo" , "oref" FROM usuarios WHERE "username" = ANY(%s)""",[[username]]).iloc[0]
+print(tipo, oref_asignada)
 
 if oref_asignada:
     condiciones = ['"CVE_REP_PROD" = ANY(%s)']
