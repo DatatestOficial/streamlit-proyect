@@ -51,7 +51,7 @@ CREMA = "#F5F1EB"
 # Funciones para pptx
 # =====================================================
 # Funciones
-@st.cache_data(ttl=3600*6)
+@st.cache_data(ttl=60*6)
 def cargar_datos(query, parametros=None):
     with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
