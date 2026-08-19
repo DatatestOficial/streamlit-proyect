@@ -2309,18 +2309,18 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 
 # where = "WHERE " + " AND ".join([oref_asignada])
 @st.cache_data
-def descargar_presentacion(oref_asignada= []):
+def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
 
     prs = Presentation("plantilla.pptx")
-
     oref_con_avance = cargar_datos(f"""
         SELECT DISTINCT "CVE_REP_PROD" FROM concentrado 
-        WHERE "CVE_REP_PROD" = ANY(%s) AND "ACTUALIZADO" = 'Si'
+        WHERE "FASES" = 'FASE 2' AND "CVE_REP_PROD" = ANY(%s) AND "ACTUALIZADO" = 'Si'  
         ORDER BY "CVE_REP_PROD";
     """,[oref_asignada])["CVE_REP_PROD"].tolist()
 
     if not oref_con_avance:
         return
+
 
     for oref in oref_con_avance:
 
@@ -2328,10 +2328,10 @@ def descargar_presentacion(oref_asignada= []):
         SELECT
             "NOM_REP",
             SUM("Personas") AS "Meta",
-            COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'), 0) AS "Avance",
-            ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'), 0)/ NULLIF(SUM("Personas"), 0))::numeric,2) AS "Pct"
+            COALESCE(SUM("Personas") FILTER (WHERE "FASES" = 'FASE 2' AND  "ACTUALIZADO" = 'Si'), 0) AS "Avance",
+            ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "FASES" = 'FASE 2' AND  "ACTUALIZADO" = 'Si'), 0)/ NULLIF(SUM("Personas"), 0))::numeric,2) AS "Pct"
         FROM concentrado
-        WHERE "CVE_REP_PROD" = {oref}
+        WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref}
         GROUP BY "NOM_REP";
         """).iloc[0]
 
@@ -2362,8 +2362,8 @@ def descargar_presentacion(oref_asignada= []):
             COLOR_VALOR = RGB_ROJO
             COLOR_TEXTO = RGB_VERDE_CLARO
 
-        fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "CVE_REP_PROD" = {oref};""").iloc[0,0]
-        dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "CVE_REP_PROD" = {oref};""").iloc[0,0]
+        fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
+        dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
         shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.7),width=Inches(4),height=Inches(0.8))
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
                                                     (f"{dias_operación:0d} dias de operación",COLOR_TEXTO,True)], font_size=16)
@@ -2394,7 +2394,7 @@ def descargar_presentacion(oref_asignada= []):
         x, y, w, h = Inches(0.1), Inches(0.1)+sep_top, Inches(4.1), Inches(1.3)
 
         categoria = "genero"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2413,7 +2413,7 @@ def descargar_presentacion(oref_asignada= []):
         )
 
         categoria = "escala"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2432,7 +2432,7 @@ def descargar_presentacion(oref_asignada= []):
         )
 
         categoria = "Estatus_coordenadas"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2452,7 +2452,7 @@ def descargar_presentacion(oref_asignada= []):
         x, y, w, h = Inches(0.1), Inches(0.2)+sep_top+h, Inches(4.1), Inches(1.6)
 
         categoria = "ciclo"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2471,7 +2471,7 @@ def descargar_presentacion(oref_asignada= []):
     )
 
         categoria = "regimen_predominante"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2490,7 +2490,7 @@ def descargar_presentacion(oref_asignada= []):
         )
 
         categoria = "Pueblo_originario"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2509,7 +2509,7 @@ def descargar_presentacion(oref_asignada= []):
         )
 
         categoria = "Estrategia_predominante"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
@@ -2547,7 +2547,7 @@ def descargar_presentacion(oref_asignada= []):
         )
 
         categoria = "dia"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
         avance_periodo = grafica_cumsum(df_categoria,periodo=categoria,text_size=32,titulo=" ",n=6)
         img_bytes = avance_periodo.to_image(format="png",width=1100,height=480,scale=1)
         img_stream = io.BytesIO(img_bytes)
@@ -2571,8 +2571,8 @@ def descargar_presentacion(oref_asignada= []):
         slide_s2h2.shapes.title.text_frame.paragraphs[1].font.color.rgb = RGBColor(255, 255, 255)
         slide_s2h2.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
 
-        fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "CVE_REP_PROD" = {oref};""").iloc[0,0]
-        dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "CVE_REP_PROD" = {oref};""").iloc[0,0]
+        fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
+        dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
         shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.7),width=Inches(4),height=Inches(0.8))
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
                                                     (f"{dias_operación:0d} dias de operación",COLOR_TEXTO,True)], font_size=16)

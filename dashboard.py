@@ -1022,7 +1022,6 @@ else:
 if tipo != 'administrador':
     condiciones.append('"FASES" = ANY(%s)')
     parametros.append(["FASE 2"])
-    
 
 where = "WHERE " + " AND ".join(condiciones)
 query_rep = f"""SELECT DISTINCT "NOM_REP" FROM concentrado {where};"""
@@ -1510,7 +1509,7 @@ with st.sidebar:
         version = (oref_pptx, fecha_datos)
         if st.button("📥 Preparar presentación"):
             with st.spinner("Generando presentación..."):
-                st.session_state["presentacion"] = descargar_presentacion(oref_pptx)
+                st.session_state["presentacion"] = descargar_presentacion(oref_pptx,tipo)
                 st.session_state["version"] = version
                 st.rerun()
         if (
