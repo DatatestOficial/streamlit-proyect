@@ -1020,9 +1020,9 @@ else:
     pass
 
 if tipo != 'administrador':
-    condiciones = ['"FASES" = ANY(%s)']
-    parametros=[['FASE 2']]
-
+    condiciones.append('"FASES" = ANY(%s)')
+    parametros.append(["FASE 2"])
+    
 
 where = "WHERE " + " AND ".join(condiciones)
 query_rep = f"""SELECT DISTINCT "NOM_REP" FROM concentrado {where};"""
