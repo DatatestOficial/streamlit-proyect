@@ -1003,8 +1003,6 @@ with st.sidebar:
         proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"])
     else:
         proceso = None
-        condiciones = ['"FASES" = ANY(%s)']
-        parametros=[['FASE 2']]
 
 if proceso == "8 OREF":
     condiciones.append('"OCHO_ENT" = ANY(%s)')
@@ -1012,14 +1010,19 @@ if proceso == "8 OREF":
 elif proceso == "25 OREF":
     condiciones.append('"OCHO_ENT" = ANY(%s)')
     parametros.append(["No"])
-elif proceso == "Fase 1":
+elif proceso == "FASE 1":
     condiciones.append('"FASES" = ANY(%s)')
     parametros.append(["FASE 1"])
-elif proceso == "Fase 2":
+elif proceso == "FASE 2":
     condiciones.append('"FASES" = ANY(%s)')
     parametros.append(["FASE 2"])
 else:
     pass
+
+if tipo != 'administrador':
+    condiciones = ['"FASES" = ANY(%s)']
+    parametros=[['FASE 2']]
+
 
 where = "WHERE " + " AND ".join(condiciones)
 query_rep = f"""SELECT DISTINCT "NOM_REP" FROM concentrado {where};"""
