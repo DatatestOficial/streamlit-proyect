@@ -986,9 +986,12 @@ enviar_ingreso(username)
 tipo, oref_asignada = cargar_datos("""SELECT "tipo" , "oref" FROM usuarios WHERE "username" = ANY(%s)""",[[username]]).iloc[0]
 print(tipo, oref_asignada)
 
+
+
 if oref_asignada:
     condiciones = ['"CVE_REP_PROD" = ANY(%s)']
     parametros=[oref_asignada]
+
 
 # # ═══════════════════════════════════════════════════════════════════════════════
 # # SIDEBAR - FILTROS
@@ -997,9 +1000,11 @@ if oref_asignada:
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
-        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "CONADESUCA", "Reposición de tarjetas"])
+        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"])
     else:
         proceso = None
+        condiciones = ['"FASES" = ANY(%s)']
+        parametros=[['FASE 2']]
 
 if proceso == "8 OREF":
     condiciones.append('"OCHO_ENT" = ANY(%s)')
@@ -1007,12 +1012,12 @@ if proceso == "8 OREF":
 elif proceso == "25 OREF":
     condiciones.append('"OCHO_ENT" = ANY(%s)')
     parametros.append(["No"])
-elif proceso == "CONADESUCA":
-    condiciones.append('"CONADESUCA" = ANY(%s)')
-    parametros.append(["Si"])
-elif proceso == "Reposición de tarjetas":
-    condiciones.append('"reposición_tarjeta" = ANY(%s)')
-    parametros.append(["Si"])
+elif proceso == "Fase 1":
+    condiciones.append('"FASES" = ANY(%s)')
+    parametros.append(["FASE 1"])
+elif proceso == "Fase 2":
+    condiciones.append('"FASES" = ANY(%s)')
+    parametros.append(["FASE 2"])
 else:
     pass
 
