@@ -974,8 +974,8 @@ st.markdown(f"""
         <p style="font-size: 1.2em; color: {AMARILLO}; margin-top: 0px; font-weight: bold;">
             Reporte del {hoy} con Información actualizada al <span style="color: {VERDE}; font-weight: bold;">{fecha_datos}</span> 
         </p>
-    </div>
     """, unsafe_allow_html=True)
+    </div>
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Definir usuarios y accesos
@@ -997,10 +997,12 @@ if oref_asignada:
 # # SIDEBAR - FILTROS
 # # ═══════════════════════════════════════════════════════════════════════════════
 
+
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
-        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"])
+        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"],
+                               index = 4)
     else:
         proceso = None
 
