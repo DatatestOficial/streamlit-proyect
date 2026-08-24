@@ -1001,8 +1001,7 @@ if oref_asignada:
 with st.sidebar:
     st.header("Filtros de información")
     if tipo == 'administrador':
-        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"],
-                               index = 4)
+        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"],index = 4)
     else:
         proceso = None
 
