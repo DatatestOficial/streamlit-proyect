@@ -949,7 +949,7 @@ div[data-testid="stMultiSelect"] label p {
 # CARGA DE DATOS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Funciones
-@st.cache_data(ttl=60*5)
+@st.cache_data(ttl=60*15)
 def cargar_datos(query, parametros=None):
     with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
@@ -984,7 +984,7 @@ username = st.session_state["username"]
 enviar_ingreso(username)
 
 tipo, oref_asignada = cargar_datos("""SELECT "tipo" , "oref" FROM usuarios WHERE "username" = ANY(%s)""",[[username]]).iloc[0]
-print(tipo, oref_asignada)
+# print(tipo, oref_asignada)
 
 
 

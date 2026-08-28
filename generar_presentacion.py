@@ -51,7 +51,7 @@ CREMA = "#F5F1EB"
 # Funciones para pptx
 # =====================================================
 # Funciones
-@st.cache_data(ttl=60*6)
+@st.cache_data(ttl=60*15)
 def cargar_datos(query, parametros=None):
     with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
@@ -2336,12 +2336,12 @@ def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
         """).iloc[0]
 
         # Filtrar datos de la OREF actual
-        oref_nombre, total_personas, avance_oref,  avance_pct_oref = datos_oref
+        oref_nombre, meta, avance_oref,  avance_pct_oref = datos_oref
         # Crear diapositiva
         slide_s2h1 = prs.slides.add_slide(prs.slide_layouts[17])
         slide_s2h1.shapes.title.text = (
             f"{oref_nombre}\n"
-            f"Avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
+            f"Meta: {meta:,.0f}, avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
         )
 
         slide_s2h1.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
@@ -2364,9 +2364,11 @@ def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
 
         fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
-        shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.7),width=Inches(4),height=Inches(0.8))
+        shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.65),width=Inches(4),height=Inches(0.8))
+        ddr, cader, mun = cargar_datos(f"""SELECT COUNT(DISTINCT "NOM_DDR_PROD"), COUNT(DISTINCT "NOM_CAD_PROD"), COUNT(DISTINCT "NOM_MUN_PROD")  FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0]
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
-                                                    (f"{dias_operación:0d} dias de operación",COLOR_TEXTO,True)], font_size=16)
+                                                    (f"   dias de operación\n",COLOR_TEXTO,True),
+                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=14)
         agregar_forma(
             slide_s2h1,
             shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -2537,7 +2539,7 @@ def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
             top=y+h+Inches(0.1),
             width=Inches(8.5),
             height=Inches(2.8),
-            title="Avance acumulado por día",
+            title="Gráfico de avance",
             body_size=18,
             title_size=22,
             show_text=False,
@@ -2546,25 +2548,25 @@ def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
             value_color=COLOR_VALOR,
         )
 
-        categoria = "dia"
-        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
-        avance_periodo = grafica_cumsum(df_categoria,periodo=categoria,text_size=32,titulo=" ",n=6)
-        img_bytes = avance_periodo.to_image(format="png",width=1100,height=480,scale=1)
-        img_stream = io.BytesIO(img_bytes)
-        # Insertar en PowerPoint
-        slide_s2h1.shapes.add_picture(
-            img_stream,
-            left=Inches(4.6),
-            top=y+h+Inches(0.5),
-            width=Inches(8.2),
-            height=Inches(2.5),
-        )
+        # categoria = "dia"
+        # df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+        # avance_periodo = grafica_cumsum(df_categoria,periodo=categoria,text_size=32,titulo=" ",n=6)
+        # img_bytes = avance_periodo.to_image(format="png",width=1100,height=480,scale=1)
+        # img_stream = io.BytesIO(img_bytes)
+        # # Insertar en PowerPoint
+        # slide_s2h1.shapes.add_picture(
+        #     img_stream,
+        #     left=Inches(4.6),
+        #     top=y+h+Inches(0.5),
+        #     width=Inches(8.2),
+        #     height=Inches(2.5),
+        # )
 
         slide_s2h2 = prs.slides.add_slide(prs.slide_layouts[17])
 
         slide_s2h2.shapes.title.text = (
             f"{oref_nombre}\n"
-            f"Avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
+            f"Meta: {meta:,.0f}, avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
         )
 
         slide_s2h2.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
@@ -2573,9 +2575,10 @@ def descargar_presentacion(oref_asignada= [], tipo = 'operativo'):
 
         fecha_datos = cargar_datos(f"""SELECT MAX("dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado WHERE "FASES" = 'FASE 2' AND  "CVE_REP_PROD" = {oref};""").iloc[0,0]
-        shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.7),width=Inches(4),height=Inches(0.8))
+        shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.65),width=Inches(4),height=Inches(0.8))
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
-                                                    (f"{dias_operación:0d} dias de operación",COLOR_TEXTO,True)], font_size=16)
+                                                    (f"   dias de operación\n",COLOR_TEXTO,True),
+                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=14)
         agregar_forma(
             slide_s2h2,
             shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
