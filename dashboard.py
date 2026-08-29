@@ -949,7 +949,7 @@ div[data-testid="stMultiSelect"] label p {
 # CARGA DE DATOS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Funciones
-@st.cache_data(ttl=60*15)
+@st.cache_data(ttl=60*30)
 def cargar_datos(query, parametros=None):
     with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
@@ -1000,18 +1000,16 @@ if oref_asignada:
 
 with st.sidebar:
     st.header("Filtros de información")
-    if tipo == 'administrador':
-        proceso = st.selectbox("Seleccionar proceso", ["NACIONAL", "8 OREF", "25 OREF", "FASE 1", "FASE 2"], index=4)
-    else:
-        proceso = None
+    proceso = st.selectbox("Seleccionar proceso", ["GENERAL","FASE 1", "FASE 2"], index=2)
 
-if proceso == "8 OREF":
-    condiciones.append('"OCHO_ENT" = ANY(%s)')
-    parametros.append(["Si"])
-elif proceso == "25 OREF":
-    condiciones.append('"OCHO_ENT" = ANY(%s)')
-    parametros.append(["No"])
-elif proceso == "FASE 1":
+# print(proceso)
+# if proceso == "8 OREF":
+#     condiciones.append('"OCHO_ENT" = ANY(%s)')
+#     parametros.append(["Si"])
+# elif proceso == "25 OREF":
+#     condiciones.append('"OCHO_ENT" = ANY(%s)')
+#     parametros.append(["No"])
+if proceso == "FASE 1":
     condiciones.append('"FASES" = ANY(%s)')
     parametros.append(["FASE 1"])
 elif proceso == "FASE 2":
@@ -1019,10 +1017,6 @@ elif proceso == "FASE 2":
     parametros.append(["FASE 2"])
 else:
     pass
-
-if tipo != 'administrador':
-    condiciones.append('"FASES" = ANY(%s)')
-    parametros.append(["FASE 2"])
 
 where = "WHERE " + " AND ".join(condiciones)
 query_rep = f"""SELECT DISTINCT "NOM_REP" FROM concentrado {where};"""
@@ -1156,7 +1150,7 @@ with tab_avance:
 
             
             df_oref=(cargar_datos(f"""SELECT "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta", sum("Personas") AS "Personas" FROM concentrado {where_oref} GROUP BY "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta";""",parametros_oref).assign(
-                Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"Fase 1","Fase 2"),
+                Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"8 OREF","25 OREF"),
                 Personas_act=lambda x:x["Personas"].where(x["ACTUALIZADO"].eq("Si"),0),
                 Personas_meta_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si"),0),
                 Personas_act_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0),
@@ -1420,35 +1414,36 @@ with tab_graficos:
                 st.plotly_chart(crear_dona(cargar_datos(query_categoria_dona, parametros), titulo),width='content',key=f"dona_{categoria}")
 
 with tab_Consultador:
-
+    # columnas_nombres = { "CVE_REP_PROD": "Clave de OREF", "NOM_REP": "Nombre de OREF", "NOM_DDR_PROD": "DDR", "NOM_CAD_PROD": "CADER", # "ACTUALIZADO": "Estatus Actualización", "OCHO_ENT": "Fase 1", "CONADESUCA": "CONADESUCA", "reposición_tarjeta": "Reposición de tarjeta", "Estatus_coordenadas": "Estatus de coordenadas", "Grupos_Edad": "Grupo de edad", "Pueblo_originario": "Pueblo originario", # "descripcion_pueblo": "Descripción del pueblo originario", "genero": "Género", "dia": "Día", "semana": "Semana", "mes": "Mes", # "clave_documento_propiedad": "Clave documento de propiedad", # "nombre_documento_propiedad": "Nombre documento de propiedad", # "EstatusDocProp": "Estatus documento de propiedad", "Grupo_Superficie": "Grupo de superficie", "tipo_posesion": "Tipo de posesión", "cultivo_predominante": "Cultivo predominante", "cultivo": "Cultivo", "Estrategia_predominante": "Estrategia predominante", "regimen_predominante": "Régimen predominante", "ciclo": "Ciclo agrícola", "escala": "Escala", # "Cambio_sup": "Cambio de superficie", # "Cambio_cultivo": "Cambio de cultivo", # "Cambio_regimen": "Cambio de régimen", # "Cambio_predios": "Cambio de predios", }
     columnas_nombres = {
-        "CVE_REP_PROD": "Clave de OREF",
-        "NOM_REP": "Nombre de OREF",
-        "NOM_DDR_PROD": "DDR",
         "NOM_CAD_PROD": "CADER",
-        # "ACTUALIZADO": "Estatus Actualización",
-        "OCHO_ENT": "Fase 1",
+        "CVE_REP_PROD": "Clave de OREF",
+        "ciclo": "Ciclo agrícola",
         "CONADESUCA": "CONADESUCA",
-        "reposición_tarjeta": "Reposición de tarjeta",
-        "Estatus_coordenadas": "Estatus de coordenadas",
-        "Grupos_Edad": "Grupo de edad",
-        "Pueblo_originario": "Pueblo originario",
-        # "descripcion_pueblo": "Descripción del pueblo originario",
-        "genero": "Género",
+        "cultivo": "Cultivo",
+        "cultivo_predominante": "Cultivo predominante",
+        "NOM_DDR_PROD": "DDR",
         "dia": "Día",
-        "semana": "Semana",
+        "escala": "Escala",
+        "Estrategia_predominante": "Estrategia predominante",
+        "Estatus_coordenadas": "Estatus de coordenadas",
+        "genero": "Género",
+        "Grupos_Edad": "Grupo de edad",
+        "Grupo_Superficie": "Grupo de superficie",
         "mes": "Mes",
+        "NOM_REP": "Nombre de OREF",
+        "Pueblo_originario": "Pueblo originario",
+        "regimen_predominante": "Régimen predominante",
+        "reposición_tarjeta": "Reposición de tarjeta",
+        "semana": "Semana",
+        "tipo_posesion": "Tipo de posesión",
+        "OCHO_ENT": "8 OREF",
+        # Líneas comentadas originales:
+        # "ACTUALIZADO": "Estatus Actualización",
+        # "descripcion_pueblo": "Descripción del pueblo originario",
         # "clave_documento_propiedad": "Clave documento de propiedad",
         # "nombre_documento_propiedad": "Nombre documento de propiedad",
         # "EstatusDocProp": "Estatus documento de propiedad",
-        "Grupo_Superficie": "Grupo de superficie",
-        "tipo_posesion": "Tipo de posesión",
-        "cultivo_predominante": "Cultivo predominante",
-        "cultivo": "Cultivo",
-        "Estrategia_predominante": "Estrategia predominante",
-        "regimen_predominante": "Régimen predominante",
-        "ciclo": "Ciclo agrícola",
-        "escala": "Escala",
         # "Cambio_sup": "Cambio de superficie",
         # "Cambio_cultivo": "Cambio de cultivo",
         # "Cambio_regimen": "Cambio de régimen",
@@ -1510,7 +1505,7 @@ with st.sidebar:
         version = (oref_pptx, fecha_datos)
         if st.button("📥 Preparar presentación"):
             with st.spinner("Generando presentación..."):
-                st.session_state["presentacion"] = descargar_presentacion(oref_pptx,tipo)
+                st.session_state["presentacion"] = descargar_presentacion(oref_pptx,proceso)
                 st.session_state["version"] = version
                 st.rerun()
         if (
