@@ -1414,29 +1414,28 @@ with tab_graficos:
                 st.plotly_chart(crear_dona(cargar_datos(query_categoria_dona, parametros), titulo),width='content',key=f"dona_{categoria}")
 
 with tab_Consultador:
-    # columnas_nombres = { "CVE_REP_PROD": "Clave de OREF", "NOM_REP": "Nombre de OREF", "NOM_DDR_PROD": "DDR", "NOM_CAD_PROD": "CADER", # "ACTUALIZADO": "Estatus Actualización", "OCHO_ENT": "Fase 1", "CONADESUCA": "CONADESUCA", "reposición_tarjeta": "Reposición de tarjeta", "Estatus_coordenadas": "Estatus de coordenadas", "Grupos_Edad": "Grupo de edad", "Pueblo_originario": "Pueblo originario", # "descripcion_pueblo": "Descripción del pueblo originario", "genero": "Género", "dia": "Día", "semana": "Semana", "mes": "Mes", # "clave_documento_propiedad": "Clave documento de propiedad", # "nombre_documento_propiedad": "Nombre documento de propiedad", # "EstatusDocProp": "Estatus documento de propiedad", "Grupo_Superficie": "Grupo de superficie", "tipo_posesion": "Tipo de posesión", "cultivo_predominante": "Cultivo predominante", "cultivo": "Cultivo", "Estrategia_predominante": "Estrategia predominante", "regimen_predominante": "Régimen predominante", "ciclo": "Ciclo agrícola", "escala": "Escala", # "Cambio_sup": "Cambio de superficie", # "Cambio_cultivo": "Cambio de cultivo", # "Cambio_regimen": "Cambio de régimen", # "Cambio_predios": "Cambio de predios", }
-    columnas_nombres = {
-        "NOM_CAD_PROD": "CADER",
+    columnas_nombres = { 
+        "FASES": "Fases",
         "CVE_REP_PROD": "Clave de OREF",
-        "ciclo": "Ciclo agrícola",
-        "CONADESUCA": "CONADESUCA",
-        "cultivo": "Cultivo",
-        "cultivo_predominante": "Cultivo predominante",
-        "NOM_DDR_PROD": "DDR",
-        "dia": "Día",
-        "escala": "Escala",
-        "Estrategia_predominante": "Estrategia predominante",
-        "Estatus_coordenadas": "Estatus de coordenadas",
-        "genero": "Género",
-        "Grupos_Edad": "Grupo de edad",
-        "Grupo_Superficie": "Grupo de superficie",
-        "mes": "Mes",
         "NOM_REP": "Nombre de OREF",
+        "NOM_DDR_PROD": "Nombre de DDR",
+        "NOM_CAD_PROD": "Nombre de CADER",
+        "Estatus_coordenadas": "Estatus de coordenadas",
+        "Grupos_Edad": "Grupo de edad",
         "Pueblo_originario": "Pueblo originario",
-        "regimen_predominante": "Régimen predominante",
-        "reposición_tarjeta": "Reposición de tarjeta",
+        "genero": "Género",
+        "dia": "Día",
         "semana": "Semana",
+        "mes": "Mes",
+        "Grupo_Superficie": "Grupo de superficie",
         "tipo_posesion": "Tipo de posesión",
+        "Estrategia_predominante": "Estrategia por persona",
+        "regimen_predominante": "Régimen por persona",
+        "cultivo_predominante": "Cultivo por persona",
+        "cultivo": "Cultivo por predio",
+        "ciclo": "Ciclo agrícola por persona",
+        "CONADESUCA": "CONADESUCA",
+        "reposición_tarjeta": "Reposición de tarjeta",
         "OCHO_ENT": "8 OREF",
         # Líneas comentadas originales:
         # "ACTUALIZADO": "Estatus Actualización",
@@ -1448,10 +1447,8 @@ with tab_Consultador:
         # "Cambio_cultivo": "Cambio de cultivo",
         # "Cambio_regimen": "Cambio de régimen",
         # "Cambio_predios": "Cambio de predios",
-    }
-
+    } 
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Consultador general</span>", unsafe_allow_html=True)
-
     columnas_elegidas = st.multiselect(
         "Opciones:", 
         options=columnas_nombres.values(), 
