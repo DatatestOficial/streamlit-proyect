@@ -2310,11 +2310,11 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 # where = "WHERE " + " AND ".join([oref_asignada])
 @st.cache_data
 def descargar_presentacion(oref_asignada= [], proceso = None):
+
     prs = Presentation("plantilla.pptx")
     if oref_asignada:
         condiciones = ['"CVE_REP_PROD" = ANY(%s)']
         parametros=[oref_asignada]
-
     if proceso == "FASE 1":
         condiciones.append('"FASES" = ANY(%s)')
         parametros.append(["FASE 1"])
@@ -2375,7 +2375,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
         fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado {where};""",parametros).iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado {where};""",parametros).iloc[0,0]
         shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.65),width=Inches(4),height=Inches(0.8))
-        ddr, cader, mun = cargar_datos(f"""SELECT COUNT(DISTINCT "NOM_DDR_PROD"), COUNT(DISTINCT "NOM_CAD_PROD"), COUNT(DISTINCT "NOM_MUN_PROD")  FROM concentrado {where};""",parametros).iloc[0]
+        ddr, cader, mun = cargar_datos(f"""SELECT "N_DDR", "N_CADER", "N_MUN" FROM conteos {where};""",parametros).iloc[0]
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
                                                     (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
                                                     (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=14)

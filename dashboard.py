@@ -1260,7 +1260,7 @@ with tab_productivos:
         -- RH
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'TEMPORAL'), 0) AS "Temporal",
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'RIEGO'), 0) AS "Riego",
-        COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'NO APLICA'), 0) AS "Sin régimen",
+        COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'NO APLICA'), 0) AS "No aplica",
         -- Ciclo
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PE'), 0) AS "Perenne",
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "OI",
