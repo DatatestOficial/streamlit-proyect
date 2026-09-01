@@ -2512,7 +2512,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             top=y,
             width=w,
             height=h,
-            title="Pueblo originario",
+            title="Pueblo",
             body_size=18,
             title_size=22,
             header_fill=COLOR_LAMINA,

@@ -1000,7 +1000,7 @@ if oref_asignada:
 
 with st.sidebar:
     st.header("Filtros de información")
-    proceso = st.selectbox("Seleccionar proceso", ["GENERAL","FASE 1", "FASE 2"], index=2)
+    proceso = st.selectbox("Seleccionar proceso", ["GENERAL","FASE 1", "FASE 2"], index=0)
 
 # print(proceso)
 # if proceso == "8 OREF":
@@ -1279,7 +1279,7 @@ with tab_productivos:
 
     st.dataframe(df_estrategia_ciclo_rh_tipo,column_config=df_estrategia_ciclo_rh_tipo_config,hide_index=True)
     if not df_estrategia_ciclo_rh_tipo.empty:
-        st.dataframe(df_estrategia_ciclo_rh_tipo.select_dtypes(include="number").sum().to_frame().T.assign(**{"Estrategia_predominante":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_estrategia_ciclo_rh_tipo_config, hide_index=True)
+        st.dataframe(df_estrategia_ciclo_rh_tipo.select_dtypes(include="number").sum().to_frame().T.assign(**{"Estrategia predominante":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_estrategia_ciclo_rh_tipo_config, hide_index=True)
 
     # Falta agregar titulos
     query_grupo_superficie_escala_cambios =f"""
@@ -1330,14 +1330,15 @@ with tab_perfil:
     SELECT
         "Grupos_Edad" AS "Grupos de edad",
         -- Coordenadas
-        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Congruente'), 0) AS "Coordenada congruente",
-        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Incongruente'), 0) AS "Coordenada incongruente",
+        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Congruente'), 0) AS "Coordenada en México",
+        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Incongruente'), 0) AS "Coordenada fuera de México",
         -- Género
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Hombre'), 0) AS "Hombre",
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Mujer'), 0) AS "Mujer",
         -- Indiginas
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Si'), 0) AS "Población indígena",
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'No'), 0) AS "Población no indígena",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Originario'), 0) AS "Población Originaria",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Afromexicano'), 0) AS "Población Afromexicana",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Otros'), 0) AS "Resto de la población",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Grupos de edad" ORDER BY "Total" DESC;
     """
@@ -1350,7 +1351,7 @@ with tab_perfil:
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Personas actualizadas por edad, estatus de georreferencia, género y tipo  de población </span>", unsafe_allow_html=True)
     st.dataframe(df_grupos_edad_genero,column_config=df_grupos_edad_genero_config,hide_index=True)
     if not df_grupos_edad_genero.empty:
-        st.dataframe(df_grupos_edad_genero.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupos de edad":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_grupos_edad_genero_config, hide_index=True)
+        st.dataframe(df_grupos_edad_genero.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupos de edad":"Total"}).iloc[:,[-1,*range(0,8)]], column_config=df_grupos_edad_genero_config, hide_index=True)
 
 with tab_graficos:
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Gráficos generales de personas actualizadas</span>", unsafe_allow_html=True)
@@ -1396,7 +1397,7 @@ with tab_graficos:
         "Régimen hídrico": "regimen_predominante",
         "Escala": "escala",
         "Tipo de posesión": "tipo_posesion",
-        "Pueblo originario": "Pueblo_originario",
+        "Pueblo": "Pueblo_originario",
         "Género": "genero",
     }
     items = list(categorias.items())
@@ -1463,9 +1464,9 @@ with tab_Consultador:
         query_consulta = f"""
         SELECT
             {columnas}, "ACTUALIZADO",
-            SUM("Personas") AS Personas,
-            SUM("Superficie") AS Superficie,
-            SUM("Registros") AS Registros
+            SUM("Personas") AS "Personas",
+            COALESCE(SUM("Superficie"),0) AS "Superficie",
+            SUM("Registros") AS "Predios"
         FROM concentrado
         {where_oref}
         GROUP BY {columnas} , "ACTUALIZADO"
@@ -1474,9 +1475,9 @@ with tab_Consultador:
         query_consulta = f"""
         SELECT
             "ACTUALIZADO",
-            SUM("Personas") AS Personas,
-            SUM("Superficie") AS Superficie,
-            SUM("Registros") AS Registros
+            SUM("Personas") AS "Personas",
+            SUM("Superficie") AS "Superficie",
+            SUM("Registros") AS "Predios"
         FROM concentrado
         {where_oref} GROUP BY "ACTUALIZADO";
         """
