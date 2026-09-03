@@ -1351,7 +1351,7 @@ with tab_perfil:
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Personas actualizadas por edad, estatus de georreferencia, género y tipo  de población </span>", unsafe_allow_html=True)
     st.dataframe(df_grupos_edad_genero,column_config=df_grupos_edad_genero_config,hide_index=True)
     if not df_grupos_edad_genero.empty:
-        st.dataframe(df_grupos_edad_genero.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupos de edad":"Total"}).iloc[:,[-1,*range(0,8)]], column_config=df_grupos_edad_genero_config, hide_index=True)
+        st.dataframe(df_grupos_edad_genero.select_dtypes(include="number").sum().to_frame().T.assign(**{"Grupos de edad":"Total"}).iloc[:,[-1,*range(0,7)]], column_config=df_grupos_edad_genero_config, hide_index=True)
 
 with tab_graficos:
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Gráficos generales de personas actualizadas</span>", unsafe_allow_html=True)
