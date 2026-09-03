@@ -1336,9 +1336,9 @@ with tab_perfil:
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Hombre'), 0) AS "Hombre",
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Mujer'), 0) AS "Mujer",
         -- Indiginas
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Originario'), 0) AS "Población Originaria",
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Afromexicano'), 0) AS "Población Afromexicana",
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Otros'), 0) AS "Resto de la población",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Si'), 0) AS "Si",
+        -- COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Afromexicano'), 0) AS "Población Afromexicana",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'No'), 0) AS "No",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Grupos de edad" ORDER BY "Total" DESC;
     """
@@ -1400,6 +1400,7 @@ with tab_graficos:
         "Pueblo": "Pueblo_originario",
         "Género": "genero",
     }
+    
     items = list(categorias.items())
     for i in range(0, len(items), 3):
         cols = st.columns(3)
