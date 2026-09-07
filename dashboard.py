@@ -1149,7 +1149,7 @@ with tab_avance:
             cols = ["Etiqueta","NOM_REP","Personas","Personas_act","pct_act","Personas_meta_caña","Personas_act_caña","pct_caña","Personas_meta_tarjetas","Personas_act_tarjetas","pct_tarjetas"]
 
             
-            df_oref=(cargar_datos(f"""SELECT "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta", sum("Personas") AS "Personas" FROM concentrado {where_oref} GROUP BY "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta";""",parametros_oref).assign(
+            df_oref=(cargar_datos(f"""SELECT "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta", sum("Personas") AS "Personas" FROM geo_loc {where_oref} GROUP BY "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta";""",parametros_oref).assign(
                 Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"8 OREF","25 OREF"),
                 Personas_act=lambda x:x["Personas"].where(x["ACTUALIZADO"].eq("Si"),0),
                 Personas_meta_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si"),0),
@@ -1191,7 +1191,7 @@ with tab_avance:
             "Avance\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
             "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
         }
-        df_cader = (cargar_datos(f"""SELECT "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO", sum("Personas") AS "Personas" FROM concentrado {where_oref} GROUP BY "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO";""",parametros_oref)
+        df_cader = (cargar_datos(f"""SELECT "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO", sum("Personas") AS "Personas" FROM geo_loc {where_oref} GROUP BY "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO";""",parametros_oref)
                     .assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
                     .groupby(["NOM_REP", "NOM_DDR_PROD", "NOM_CAD_PROD",],dropna=False,as_index=False)[["Personas","avance"]]
                     .sum().reset_index(drop=True)
@@ -1330,8 +1330,8 @@ with tab_perfil:
     SELECT
         "Grupos_Edad" AS "Grupos de edad",
         -- Coordenadas
-        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Congruente'), 0) AS "Coordenada en México",
-        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Incongruente'), 0) AS "Coordenada fuera de México",
+        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Congruente'), 0) AS "Georreferencia en México",
+        COALESCE(SUM("Personas") FILTER (WHERE "Estatus_coordenadas" = 'Incongruente'), 0) AS "Georreferencia fuera de México",
         -- Género
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Hombre'), 0) AS "Hombre",
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Mujer'), 0) AS "Mujer",
