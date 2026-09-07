@@ -1420,8 +1420,8 @@ with tab_Consultador:
         "FASES": "Fases",
         "CVE_REP_PROD": "Clave de OREF",
         "NOM_REP": "Nombre de OREF",
-        "NOM_DDR_PROD": "Nombre de DDR",
-        "NOM_CAD_PROD": "Nombre de CADER",
+        # "NOM_DDR_PROD": "Nombre de DDR",
+        # "NOM_CAD_PROD": "Nombre de CADER",
         "Estatus_coordenadas": "Estatus de coordenadas",
         "Grupos_Edad": "Grupo de edad",
         "Pueblo_originario": "Pueblo originario",
@@ -1445,10 +1445,10 @@ with tab_Consultador:
         # "clave_documento_propiedad": "Clave documento de propiedad",
         # "nombre_documento_propiedad": "Nombre documento de propiedad",
         # "EstatusDocProp": "Estatus documento de propiedad",
-        # "Cambio_sup": "Cambio de superficie",
-        # "Cambio_cultivo": "Cambio de cultivo",
-        # "Cambio_regimen": "Cambio de régimen",
-        # "Cambio_predios": "Cambio de predios",
+        "Cambio_sup": "Cambio de superficie",
+        "Cambio_cultivo": "Cambio de cultivo",
+        "Cambio_regimen": "Cambio de régimen",
+        "Cambio_predios": "Cambio de predios",
     } 
     st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Consultador general</span>", unsafe_allow_html=True)
     columnas_elegidas = st.multiselect(
