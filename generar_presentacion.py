@@ -1692,7 +1692,7 @@ hoy = datetime.now(ZoneInfo("America/Mexico_City"))
 # slide_titulo.placeholders[1].text = "Proceso de actualización - 2026"
 
 fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
-# fecha_datos =format_date(df["dia"].max(), format="d 'de' MMMM 'de' yyyy", locale="es")
+fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
 # shape_procesos = slide_titulo.shapes.add_textbox(left=Inches(0.25),top=Inches(6.5),width=Inches(5),height=Inches(0.5))
 # add_styled_line(shape_procesos.text_frame, [("Reporte con información\n",RGB_BLANCO,True),(f"al {fecha_datos}",RGB_BLANCO,True)], font_size=22)
 # #########################################################################################################
@@ -1886,7 +1886,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Género",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_VERDE,
 #     category_color=COLOR_TEXTO,
@@ -1903,7 +1903,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Escala",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_ROJO,
 #     category_color=COLOR_TEXTO,
@@ -1920,7 +1920,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Estatus coordenadas",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_CAFE,
 #     category_color=COLOR_TEXTO,
@@ -1939,7 +1939,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Ciclo",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_VERDE_CLARO,
 #     category_color=COLOR_TEXTO,
@@ -1956,7 +1956,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Régimen hídrico",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_ROJO_CLARO,
 #     category_color=COLOR_TEXTO,
@@ -1973,7 +1973,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=w,
 #     height=h,
 #     title="Cambios en predios",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     header_fill=RGB_DORADO,
 #     category_color=COLOR_TEXTO,
@@ -2008,7 +2008,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #     width=Inches(8.5),
 #     height=Inches(2.8),
 #     title="Avance acumulado por día",
-#     body_size=18,
+#     body_size=tamaño_texto_cuerpo_tarjetas,
 #     title_size=22,
 #     show_text=False,
 #     header_fill=RGB_GRIS,
@@ -2092,7 +2092,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         COLOR_VALOR = RGB_ROJO
 #         COLOR_TEXTO = RGB_VERDE_CLARO
 
-#     shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.7),width=Inches(4),height=Inches(0.8))
+#     shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
 #     add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
 #                                                 (f"{df_oref.groupby('dia')['Personas'].sum().shape[0]} dias de operación",COLOR_TEXTO,True)], font_size=16)
 
@@ -2133,7 +2133,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Género",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2150,7 +2150,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Escala",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2167,7 +2167,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Estatus coordenadas",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2186,7 +2186,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Ciclo",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2203,7 +2203,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Régimen hídrico",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2220,7 +2220,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=w,
 #         height=h,
 #         title="Cambios en predios",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         header_fill=COLOR_LAMINA,
 #         category_color=COLOR_TEXTO,
@@ -2255,7 +2255,7 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 #         width=Inches(8.5),
 #         height=Inches(2.8),
 #         title="Avance acumulado por día",
-#         body_size=18,
+#         body_size=tamaño_texto_cuerpo_tarjetas,
 #         title_size=22,
 #         show_text=False,
 #         header_fill=COLOR_LAMINA,
@@ -2308,6 +2308,16 @@ fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 
 
 # where = "WHERE " + " AND ".join([oref_asignada])
+
+tamaño_texto_titulo_tarjetas = 20
+tamaño_texto_cuerpo_tarjetas = 17
+# title_size=22,
+# body_size=18,
+
+# title_size=tamaño_texto_titulo_tarjetas,
+# body_size=tamaño_texto_cuerpo_tarjetas,
+
+
 @st.cache_data
 def descargar_presentacion(oref_asignada= [], proceso = None):
 
@@ -2372,13 +2382,12 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             COLOR_VALOR = RGB_ROJO
             COLOR_TEXTO = RGB_VERDE_CLARO
 
-        fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado {where};""",parametros).iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado {where};""",parametros).iloc[0,0]
-        shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.65),width=Inches(4),height=Inches(0.8))
+        shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
         ddr, cader, mun = cargar_datos(f"""SELECT "N_DDR", "N_CADER", "N_MUN" FROM conteos {where};""",parametros).iloc[0]
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
-                                                    (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
-                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=14)
+                                                    # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
+                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=12)
         agregar_forma(
             slide_s2h1,
             shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -2417,8 +2426,8 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=w,
             height=h,
             title="Género",
-            body_size=18,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
@@ -2436,14 +2445,15 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=w,
             height=h,
             title="Escala",
-            body_size=18,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
         )
 
-        categoria = "Estatus_coordenadas"
+        # categoria = "Estatus_coordenadas"
+        categoria = "Pueblo_originario"
         df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado {where} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""",parametros)
         add_tarjeta_bullets(
             slide_s2h1,
@@ -2454,9 +2464,9 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             top=y,
             width=w,
             height=h,
-            title="Estatus coordenadas",
-            body_size=18,
-            title_size=22,
+            title="Pueblo Originario",
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
@@ -2475,8 +2485,8 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=w,
             height=h,
             title="Ciclo",
-            body_size=18,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
@@ -2494,14 +2504,14 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=w,
             height=h,
             title="Régimen hídrico",
-            body_size=18,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
         )
 
-        categoria = "Pueblo_originario"
+        categoria = "Cambio_cultivo"
         df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado {where} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""",parametros)
         add_tarjeta_bullets(
             slide_s2h1,
@@ -2512,9 +2522,9 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             top=y,
             width=w,
             height=h,
-            title="Pueblo Originario",
-            body_size=18,
-            title_size=22,
+            title="Cambio de cultivo",
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
@@ -2532,31 +2542,69 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=w,
             height=Inches(2.8),
             title="Estrategia",
-            body_size=17,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
         )
 
-
+        categoria = "Cambio_sup"
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado {where} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""",parametros)
         add_tarjeta_bullets(
             slide_s2h1,
             df=df_categoria,
             category_col=categoria,
             value_col="Personas",
-            left=Inches(4.5),
+            left=x+sep_x,
             top=y+h+Inches(0.1),
-            width=Inches(8.5),
-            height=Inches(2.8),
-            title="Gráfico de avance",
-            body_size=18,
-            title_size=22,
-            show_text=False,
+            width=w,
+            height=h,
+            title="Cambios en superficie",
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
         )
+
+        categoria = "Cambio_predios"
+        df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado {where} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""",parametros)
+        add_tarjeta_bullets(
+            slide_s2h1,
+            df=df_categoria,
+            category_col=categoria,
+            value_col="Personas",
+            left=x+sep_x*2,
+            top=y+h+Inches(0.1),
+            width=w,
+            height=h,
+            title="Cambios en predios",
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
+            header_fill=COLOR_LAMINA,
+            category_color=COLOR_TEXTO,
+            value_color=COLOR_VALOR,
+        )
+
+        # Agregar gráfico de avance acumulado por día
+        # add_tarjeta_bullets(
+        #     slide_s2h1,
+        #     df=df_categoria,
+        #     category_col=categoria,
+        #     value_col="Personas",
+        #     left=Inches(4.5),
+        #     top=y+h+Inches(0.1),
+        #     width=Inches(8.5),
+        #     height=Inches(2.8),
+        #     title="Gráfico de avance",
+        #     body_size=tamaño_texto_cuerpo_tarjetas,
+        #     title_size=22,
+        #     show_text=False,
+        #     header_fill=COLOR_LAMINA,
+        #     category_color=COLOR_TEXTO,
+        #     value_color=COLOR_VALOR,
+        # )
 
         # categoria = "dia"
         # df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado {where} AND "ACTUALIZADO"='Si' GROUP BY "{categoria}";""",parametros)
@@ -2572,6 +2620,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
         #     height=Inches(2.5),
         # )
 
+        # Segunda lámina de la OREF
         slide_s2h2 = prs.slides.add_slide(prs.slide_layouts[17])
 
         slide_s2h2.shapes.title.text = (
@@ -2583,10 +2632,11 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
         slide_s2h2.shapes.title.text_frame.paragraphs[1].font.color.rgb = RGBColor(255, 255, 255)
         slide_s2h2.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
 
-        shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.65),width=Inches(4),height=Inches(0.8))
+        shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
-                                                    (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
-                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=14)
+                                                    # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
+                                                    (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)
+                                                    ], font_size=12)
         agregar_forma(
             slide_s2h2,
             shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
@@ -2609,6 +2659,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             width=Inches(1.3),
         )
 
+        # Agregar tarjetas de observaciones y focos rojos de la segunda lámina de la OREF
         sep_top = Inches(1.4)
         sep_x = Inches(4.4)
         x, y, w, h = Inches(0.1), Inches(0.1)+sep_top, Inches(4.1), Inches(1.3)
@@ -2622,10 +2673,10 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             left=x,
             top=y,
             width=Inches(12.9),
-            height=Inches(2.7),
-            title="Incidencias",
-            body_size=18,
-            title_size=22,
+            height=Inches(2.9),
+            title="Observaciones",
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
@@ -2638,12 +2689,12 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             category_col='Categoria',
             value_col="Personas",
             left=x,
-            top=y+Inches(3.1),
+            top=y+Inches(3),
             width=Inches(12.9),
-            height=Inches(2.7),
+            height=Inches(2.9),
             title="Focos Rojos",
-            body_size=18,
-            title_size=22,
+            body_size=tamaño_texto_cuerpo_tarjetas,
+            title_size=tamaño_texto_titulo_tarjetas,
             header_fill=COLOR_LAMINA,
             category_color=COLOR_TEXTO,
             value_color=COLOR_VALOR,
