@@ -1263,8 +1263,8 @@ with tab_productivos:
         COALESCE(SUM("Personas") FILTER (WHERE "regimen_predominante" = 'NO APLICA'), 0) AS "No aplica",
         -- Ciclo
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PE'), 0) AS "Perenne",
-        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "OI",
-        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "PV",
+        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "Otoño-Invierno",
+        COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "Primavera-Verano",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Estrategia predominante";
     """
@@ -1303,7 +1303,7 @@ with tab_productivos:
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Al alza'), 0) AS "Aumentaron n° de predios",
         -- COALESCE(SUM("Personas") FILTER (WHERE "Cambio_predios" = 'Se mantiene'), 0) AS "Mantienen n° de predios",
         -- Posesión
-        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'PROPIA'), 0) AS "Posesión propia",
+        COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'PROPIA'), 0) AS "En posesión o propia",
         COALESCE(SUM("Personas") FILTER (WHERE "tipo_posesion" = 'DERIVADA'), 0) AS "Posesión derivada",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Grupo de superficie" ORDER BY "Total" DESC;
@@ -1336,9 +1336,9 @@ with tab_perfil:
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Hombre'), 0) AS "Hombre",
         COALESCE(SUM("Personas") FILTER (WHERE "genero" = 'Mujer'), 0) AS "Mujer",
         -- Indiginas
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Si'), 0) AS "Si",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Si'), 0) AS "Pueblo originario",
         -- COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'Afromexicano'), 0) AS "Población Afromexicana",
-        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'No'), 0) AS "No",
+        COALESCE(SUM("Personas") FILTER (WHERE "Pueblo_originario" = 'No'), 0) AS "Resto de población",
         SUM("Personas") AS "Total"
     FROM concentrado {where} GROUP BY "Grupos de edad" ORDER BY "Total" DESC;
     """
@@ -1393,12 +1393,16 @@ with tab_graficos:
         st.plotly_chart(crear_barras(cargar_datos(query_estrategia_barras,parametros),titulo="Grupos de edad"))
 
     categorias = {
+        "Cambio de predios": "Cambio_predios",
+        "Cambio de superficie": "Cambio_sup",
+        "Cambio de cultivo": "Cambio_cultivo",
+        "Género": "genero",
+        "Pueblo originario": "Pueblo_originario",
+        "Tipo de posesión": "tipo_posesion",
         "Ciclo": "ciclo",
         "Régimen hídrico": "regimen_predominante",
         "Escala": "escala",
-        "Tipo de posesión": "tipo_posesion",
-        "Pueblo": "Pueblo_originario",
-        "Género": "genero",
+        # "Cambio de régimen": "Cambio_regimen",
     }
     
     items = list(categorias.items())
@@ -1433,12 +1437,12 @@ with tab_Consultador:
         "tipo_posesion": "Tipo de posesión",
         "Estrategia_predominante": "Estrategia por persona",
         "regimen_predominante": "Régimen por persona",
-        "cultivo_predominante": "Cultivo por persona",
-        "cultivo": "Cultivo por predio",
+        # "cultivo_predominante": "Cultivo por persona",
+        # "cultivo": "Cultivo por predio",
         "ciclo": "Ciclo agrícola por persona",
-        "CONADESUCA": "CONADESUCA",
-        "reposición_tarjeta": "Reposición de tarjeta",
-        "OCHO_ENT": "8 OREF",
+        # "CONADESUCA": "CONADESUCA",
+        # "reposición_tarjeta": "Reposición de tarjeta",
+        # "OCHO_ENT": "8 OREF",
         # Líneas comentadas originales:
         # "ACTUALIZADO": "Estatus Actualización",
         # "descripcion_pueblo": "Descripción del pueblo originario",
