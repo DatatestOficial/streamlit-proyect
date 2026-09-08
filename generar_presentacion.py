@@ -1678,6 +1678,9 @@ def agregar_forma(
 
 
 hoy = datetime.now(ZoneInfo("America/Mexico_City"))
+fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
+fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
+
 # prs = Presentation("plantilla.pptx")
 
 # df = pl.read_parquet("concentrado_actualizados.parquet").to_pandas()
@@ -1691,8 +1694,6 @@ hoy = datetime.now(ZoneInfo("America/Mexico_City"))
 # slide_titulo.shapes.title.text = "Producción para el Bienestar"
 # slide_titulo.placeholders[1].text = "Proceso de actualización - 2026"
 
-fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
-fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
 # shape_procesos = slide_titulo.shapes.add_textbox(left=Inches(0.25),top=Inches(6.5),width=Inches(5),height=Inches(0.5))
 # add_styled_line(shape_procesos.text_frame, [("Reporte con información\n",RGB_BLANCO,True),(f"al {fecha_datos}",RGB_BLANCO,True)], font_size=22)
 # #########################################################################################################
@@ -2320,31 +2321,34 @@ tamaño_texto_cuerpo_tarjetas = 17
 
 @st.cache_data
 def descargar_presentacion(oref_asignada= [], proceso = None):
-
     prs = Presentation("plantilla.pptx")
     if oref_asignada:
         condiciones = ['"CVE_REP_PROD" = ANY(%s)']
-        parametros=[oref_asignada]
+        parametros_general=[oref_asignada]
     if proceso == "FASE 1":
         condiciones.append('"FASES" = ANY(%s)')
-        parametros.append(["FASE 1"])
+        parametros_general.append(["FASE 1"])
     elif proceso == "FASE 2":
         condiciones.append('"FASES" = ANY(%s)')
-        parametros.append(["FASE 2"])
+        parametros_general.append(["FASE 2"])
     else:
         pass
 
-    where = "WHERE " + " AND ".join(condiciones)
+    where_general = "WHERE " + " AND ".join(condiciones)
     oref_con_avance_qry = f"""
         SELECT DISTINCT "CVE_REP_PROD" FROM concentrado 
-        {where} AND "ACTUALIZADO" = 'Si'  
+        {where_general} AND "ACTUALIZADO" = 'Si'  
         ORDER BY "CVE_REP_PROD";
     """    
-    oref_con_avance = cargar_datos(oref_con_avance_qry,parametros)["CVE_REP_PROD"].tolist()
+    oref_con_avance = cargar_datos(oref_con_avance_qry,parametros_general)["CVE_REP_PROD"].tolist()
     if not oref_con_avance:
         return
     for oref in oref_con_avance:
+        where = where_general +' AND "CVE_REP_PROD" = ANY(%s)'
+        parametros = parametros_general + [[oref]]
+
         parametros_doref = parametros * 3
+        parametros_doref
         datos_oref_qry = f"""
         SELECT
             "NOM_REP",
@@ -2385,7 +2389,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado {where};""",parametros).iloc[0,0]
         shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
         ddr, cader, mun = cargar_datos(f"""SELECT "N_DDR", "N_CADER", "N_MUN" FROM conteos {where};""",parametros).iloc[0]
-        add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
+        add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos} ({proceso.title()})\n",COLOR_TEXTO,True),
                                                     # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
                                                     (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=12)
         agregar_forma(
@@ -2633,7 +2637,7 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
         slide_s2h2.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
 
         shape_dias_corte = slide_s2h2.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
-        add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
+        add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos} ({proceso.title()})\n",COLOR_TEXTO,True),
                                                     # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
                                                     (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)
                                                     ], font_size=12)
