@@ -1,5 +1,4 @@
 from generar_presentacion import descargar_presentacion
-
 import streamlit as st
 import psycopg 
 import plotly.express as px
@@ -1506,7 +1505,7 @@ with st.sidebar:
 
     if oref_pptx:
         version = (oref_pptx, fecha_datos)
-        if st.button("📥 Preparar presentación"):
+        if st.button("Generar Ficha por OREF"):
             with st.spinner("Generando presentación..."):
                 st.session_state["presentacion"] = descargar_presentacion(oref_pptx,proceso)
                 st.session_state["version"] = version

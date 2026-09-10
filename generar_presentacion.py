@@ -2310,21 +2310,21 @@ fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""
 
 # where = "WHERE " + " AND ".join([oref_asignada])
 
-tamaño_texto_titulo_tarjetas = 20
-tamaño_texto_cuerpo_tarjetas = 17
 # title_size=22,
 # body_size=18,
 
 # title_size=tamaño_texto_titulo_tarjetas,
 # body_size=tamaño_texto_cuerpo_tarjetas,
 
+tamaño_texto_titulo_tarjetas = 20
+tamaño_texto_cuerpo_tarjetas = 17
 
-@st.cache_data
+@st.cache_data(ttl=60*30)
 def descargar_presentacion(oref_asignada= [], proceso = None):
     prs = Presentation("plantilla.pptx")
-    if oref_asignada:
-        condiciones = ['"CVE_REP_PROD" = ANY(%s)']
-        parametros_general=[oref_asignada]
+    condiciones = ['"CVE_REP_PROD" = ANY(%s)']
+    parametros_general=[oref_asignada]
+
     if proceso == "FASE 1":
         condiciones.append('"FASES" = ANY(%s)')
         parametros_general.append(["FASE 1"])
@@ -2367,11 +2367,9 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
             f"{oref_nombre}\n"
             f"Meta: {meta:,.0f}, avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
         )
-
         slide_s2h1.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
         slide_s2h1.shapes.title.text_frame.paragraphs[1].font.color.rgb = RGBColor(255, 255, 255)
         slide_s2h1.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
-
 
         if oref % 3 == 1:
             COLOR_LAMINA = RGB_VERDE
