@@ -1674,650 +1674,436 @@ def agregar_forma(
             
     return forma
 
-
-
-
 hoy = datetime.now(ZoneInfo("America/Mexico_City"))
 fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
 fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
 
-# prs = Presentation("plantilla.pptx")
-
-# df = pl.read_parquet("concentrado_actualizados.parquet").to_pandas()
-# print(df.columns)
-
-
-# #########################################################################################################
-# # Titulo de la presentación
-# slide_titulo = prs.slides.add_slide(prs.slide_layouts[1])
-# # Usa el placeholder de título existente
-# slide_titulo.shapes.title.text = "Producción para el Bienestar"
-# slide_titulo.placeholders[1].text = "Proceso de actualización - 2026"
-
-# shape_procesos = slide_titulo.shapes.add_textbox(left=Inches(0.25),top=Inches(6.5),width=Inches(5),height=Inches(0.5))
-# add_styled_line(shape_procesos.text_frame, [("Reporte con información\n",RGB_BLANCO,True),(f"al {fecha_datos}",RGB_BLANCO,True)], font_size=22)
-# #########################################################################################################
-
-
-# #########################################################################################################
-# # Separador de seccion
-# slide_h1 = prs.slides.add_slide(prs.slide_layouts[16])
-# slide_h1.shapes.title.text = "Avance general"
-# # #########################################################################################################
-
-# # #########################################################################################################
-# # # Separador de seccion
-# slide_S1h1 = prs.slides.add_slide(prs.slide_layouts[11])
-# slide_S1h1.shapes.title.text = "Avance Nacional"
-
-# meta = df['Personas'].sum() if len(df) > 0 else 0
-# actualizados = df[df['ACTUALIZADO'] == 'Si']['Personas'].sum() if len(df) > 0 else 0
-# pendientes = meta - actualizados
-# pct_avance = actualizados / meta * 100 if meta > 0 else 0
-# # pct_pago = (df[df['Pagados_2026'] > 0 & df['Pagados_2026'].notnull() ]['Personas'].sum() if len(df) > 0 else 0) / actualizados * 100 if actualizados > 0 else 0
-
-# x, y, w, h = Inches(1), Inches(1.1), Inches(3.3), Inches(1.3)
-# sep = Inches(4)
-# add_kpi(
-#     slide_S1h1,
-#     x, y, w, h,
-#     "Meta de Personas",
-#     f"{meta:,.0f}",
-#     "100%",
-# )
-
-# add_kpi(
-#     slide_S1h1,
-#     x+sep, y, w, h,
-#     "Personas actualizadas",
-#     f"{actualizados:,.0f}",
-#     f"{pct_avance:.1f}%",
-# )
-
-# add_kpi(
-#     slide_S1h1,
-#     x+2*sep, y, w, h,
-#     "Personas pendientes",
-#     f"{pendientes:,.0f}",
-#     f"{100 - pct_avance:.1f}%",
-# )
-
-# barra_estado = crear_barras_porcentaje(df,"NOM_REP", "ACTUALIZADO", "Personas","", orden_ascendente=True, invertir_apilado=True,font_size = 22, height=480)
-# # Convertir Plotly → PNG en memoria
-# img_bytes = barra_estado.to_image(
-#     format="png",
-#     width=1880,
-#     height=800,
-#     scale=1
-# )
-
-# img_stream = io.BytesIO(img_bytes)
-
-# # Insertar en PowerPoint
-# slide_S1h1.shapes.add_picture(
-#     img_stream,
-#     left=Inches(0.15),
-#     top=Inches(1.9),
-#     width=Inches(13)
-# )
-# # #########################################################################################################
-# #########################################################################################################
-# # Separador de seccion
-# slide_S1h2 = prs.slides.add_slide(prs.slide_layouts[11])
-# slide_S1h2.shapes.title.text = "Avance Nacional - OREF"
-
-# resultado = (
-#     df.assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
-#     .groupby(["CVE_REP_PROD","NOM_REP"], as_index=False)
-#     .agg(meta=("Personas", "sum"),avance=("avance", "sum"))
-#     .query("avance > 0")
-#     .assign(porcentaje=lambda x: (100 * x["avance"] / x["meta"]))
-#     .sort_values("porcentaje",ascending=False)
-#     .assign(porcentaje=lambda x: (100 * x["avance"] / x["meta"]).map("{:.2f}%".format))
-# )
-# print(resultado)
-# n = len(resultado)
-# n_t1 = (n + 1) // 2   # primera mitad (redondea hacia arriba)
-# n_t2 = n // 2  
-
-# top_head=Inches(1.3)
-# row_head_h=Inches(0.65)
-# top_body=top_head+row_head_h
-
-
-# add_table_body(
-#     slide_S1h2,
-#     resultado.drop("CVE_REP_PROD", axis=1).head(n_t1),
-#     left=Inches(0.5),
-#     top=top_body,
-#     width=Inches(6),
-#     height=Inches(5),
-#     font_size=12,
-#     column_widths=[30,20,20,20],
-#     column_alignments=["left","right","right","right"],
-#     row_height=0.55,
-# )
-
-# add_header_row(
-#     slide=slide_S1h2,
-#     left=Inches(0.5),
-#     top=top_head,
-#     width=Inches(6),
-#     text=["OREF","Meta\n(Personas)","Avance\n(Personas)","Avance\n(%)"],
-#     header_colors=["#10312B","#691C32","#235B4E","#235B4E"],
-#     column_widths=[30,20,20,20],
-#     column_alignments=["center","center","center","center"],
-#     row_height=0.65,
-#     font_size=14,
-#     font_color=(255,255,255)
-# )
-
-# add_table_body(
-#     slide_S1h2,
-#     resultado.drop("CVE_REP_PROD", axis=1).tail(n_t2),
-#     left=Inches(7),
-#     top=top_body,
-#     width=Inches(6),
-#     height=Inches(5),
-#     font_size=12,
-#     column_widths=[30,20,20,20],
-#     column_alignments=["left","right","right","right"],
-#     row_height=0.55,
-# )
-
-# add_header_row(
-#     slide=slide_S1h2,
-#     left=Inches(7),
-#     top=top_head,
-#     width=Inches(6),
-#     text=["OREF","Meta\n(Personas)","Avance\n(Personas)","Avance\n(%)"],
-#     header_colors=["#10312B","#691C32","#235B4E","#235B4E"],
-#     column_widths=[30,20,20,20],
-#     column_alignments=["center","center","center","center"],
-#     row_height=0.65,
-#     font_size=14,
-#     font_color=(255,255,255)
-# )
-
-
-# slide_S1h3 = prs.slides.add_slide(prs.slide_layouts[7])
-# slide_S1h3.shapes.title.text = "\t"
-
-# shape_titulo = slide_S1h3.shapes.add_textbox(left=Inches(0.25),top=Inches(0.25),width=Inches(10),height=Inches(2))
-# add_styled_line(shape_titulo.text_frame, parts=[(f"{actualizados:,.0f} personas actualizadas\n",RGB_VERDE,True),("con los siguientes indicadores:",RGB_VERDE,True)],font_size=34,font_name="Noto Sans SemiBold")
-
-# COLOR_VALOR = RGB_ROJO
-# COLOR_TEXTO = RGB_DORADO
-
-
-# # agregar_forma(
-# #     slide_S1h3,
-# #     shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
-# #     left=Inches(0.1),
-# #     top=Inches(0.1),
-# #     width=Inches(8.45),
-# #     height=Inches(1.3),
-# #     fill_color=RGB_BLANCO,
-# #     border_color=RGB_DORADO,
-# #     border_width=0.5,
-# #     curvature=0.2,
-# #     rotation=0,
-# # )
-
-# # Imagen nacional
-# # slide_S1h3.shapes.add_picture(
-# #     f"estados/{int(oref):02d}.png",
-# #     Inches(7),
-# #     Inches(0.1),
-# #     width=Inches(1.3),
-# # )
-
-# sep_top = Inches(1.4)
-# sep_x = Inches(4.4)
-# x, y, w, h = Inches(0.1), Inches(0.1)+sep_top, Inches(4.1), Inches(1.3)
-
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="genero",
-#     value_col="Personas",
-#     left=x,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Género",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_VERDE,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="escala",
-#     value_col="Personas",
-#     left=x+sep_x,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Escala",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_ROJO,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="Estatus_coordenadas",
-#     value_col="Personas",
-#     left=x+sep_x*2,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Estatus coordenadas",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_CAFE,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# x, y, w, h = Inches(0.1), Inches(0.2)+sep_top+h, Inches(4.1), Inches(1.6)
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="ciclo",
-#     value_col="Personas",
-#     left=x,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Ciclo",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_VERDE_CLARO,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="regimen_predominante",
-#     value_col="Personas",
-#     left=x+sep_x,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Régimen hídrico",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_ROJO_CLARO,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="Cambio_predios",
-#     value_col="Personas",
-#     left=x+sep_x*2,
-#     top=y,
-#     width=w,
-#     height=h,
-#     title="Cambios en predios",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     header_fill=RGB_DORADO,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="Estrategia_predominante",
-#     value_col="Personas",
-#     left=x,
-#     top=y+h+Inches(0.1),
-#     width=w,
-#     height=Inches(2.8),
-#     title="Estrategia",
-#     body_size=17,
-#     title_size=22,
-#     header_fill=RGB_GRIS,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-
-# add_tarjeta_bullets(
-#     slide_S1h3,
-#     df=df[df['ACTUALIZADO'] == 'Si'],
-#     category_col="escala",
-#     value_col="Personas",
-#     left=Inches(4.5),
-#     top=y+h+Inches(0.1),
-#     width=Inches(8.5),
-#     height=Inches(2.8),
-#     title="Avance acumulado por día",
-#     body_size=tamaño_texto_cuerpo_tarjetas,
-#     title_size=22,
-#     show_text=False,
-#     header_fill=RGB_GRIS,
-#     category_color=COLOR_TEXTO,
-#     value_color=COLOR_VALOR,
-# )
-
-# plazo = "dia"
-# avance_periodo = grafica_cumsum(df,periodo=plazo,text_size=32,titulo=" ",n=6)
-
-# img_bytes = avance_periodo.to_image(
-#     format="png",
-#     width=1100,
-#     height=480,
-#     scale=1
-# )
-
-# img_stream = io.BytesIO(img_bytes)
-
-# # Insertar en PowerPoint
-# slide_S1h3.shapes.add_picture(
-#     img_stream,
-#     left=Inches(4.6),
-#     top=y+h+Inches(0.5),
-#     width=Inches(8.2),
-#     height=Inches(2.5),
-# )
-
-
-
-# #########################################################################################################
-
-
-# #########################################################################################################
-# # Separador para avance por estado
-# #########################################################################################################
-
-# #########################################################################################################
-# # Separador de seccion
-# slide_s2 = prs.slides.add_slide(prs.slide_layouts[16])
-# slide_s2.shapes.title.text = "Avance por OREF"
-# #########################################################################################################
-
-# #########################################################################################################
-# # Contenido por OREF
-# orefs = sorted(resultado["CVE_REP_PROD"].dropna().unique())
-
-# for oref in orefs:
-    
-#     # Filtrar datos de la OREF actual
-#     df_oref = df[df["CVE_REP_PROD"] == oref]
-
-#     oref_nombre = df_oref["NOM_REP"].iloc[0] if not df_oref.empty else "N/A"
-#     avance_oref = df_oref[df_oref["ACTUALIZADO"] == "Si"]["Personas"].sum()
-#     total_personas = df_oref["Personas"].sum()
-#     avance_pct_oref = avance_oref / total_personas * 100 if total_personas > 0 else 0
-
-#     # Crear diapositiva
-#     slide_s2h1 = prs.slides.add_slide(prs.slide_layouts[17])
-
-#     slide_s2h1.shapes.title.text = (
-#         f"{oref_nombre}\n"
-#         f"Avance: {avance_oref:,.0f} personas ({avance_pct_oref:.1f}%)"
-#     )
-
-#     slide_s2h1.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
-#     slide_s2h1.shapes.title.text_frame.paragraphs[1].font.color.rgb = RGBColor(255, 255, 255)
-#     slide_s2h1.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
-
-
-#     if oref % 3 == 1:
-#         COLOR_LAMINA = RGB_VERDE
-#         COLOR_VALOR = RGB_ROJO
-#         COLOR_TEXTO = RGB_DORADO
-#     elif oref % 3 == 2:
-#         COLOR_LAMINA = RGB_ROJO
-#         COLOR_VALOR = RGB_VERDE
-#         COLOR_TEXTO = RGB_DORADO
-#     else:
-#         COLOR_LAMINA = RGB_DORADO
-#         COLOR_VALOR = RGB_ROJO
-#         COLOR_TEXTO = RGB_VERDE_CLARO
-
-#     shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
-#     add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos}\n",COLOR_TEXTO,True),
-#                                                 (f"{df_oref.groupby('dia')['Personas'].sum().shape[0]} dias de operación",COLOR_TEXTO,True)], font_size=16)
-
-#     agregar_forma(
-#         slide_s2h1,
-#         shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
-#         left=Inches(0.1),
-#         top=Inches(0.1),
-#         width=Inches(8.45),
-#         height=Inches(1.3),
-#         fill_color=COLOR_LAMINA,
-#         border_color=RGB_DORADO,
-#         border_width=0.5,
-#         curvature=0.2,
-#         rotation=0,
-#     )
-
-#     # Imagen de la OREF
-#     slide_s2h1.shapes.add_picture(
-#         f"estados/{int(oref):02d}.png",
-#         Inches(7),
-#         Inches(0.1),
-#         width=Inches(1.3),
-#     )
-
-#     sep_top = Inches(1.4)
-#     sep_x = Inches(4.4)
-#     x, y, w, h = Inches(0.1), Inches(0.1)+sep_top, Inches(4.1), Inches(1.3)
-
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="genero",
-#         value_col="Personas",
-#         left=x,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Género",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="escala",
-#         value_col="Personas",
-#         left=x+sep_x,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Escala",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="Estatus_coordenadas",
-#         value_col="Personas",
-#         left=x+sep_x*2,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Estatus coordenadas",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     x, y, w, h = Inches(0.1), Inches(0.2)+sep_top+h, Inches(4.1), Inches(1.6)
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="ciclo",
-#         value_col="Personas",
-#         left=x,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Ciclo",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-# )
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="regimen_predominante",
-#         value_col="Personas",
-#         left=x+sep_x,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Régimen hídrico",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="Cambio_predios",
-#         value_col="Personas",
-#         left=x+sep_x*2,
-#         top=y,
-#         width=w,
-#         height=h,
-#         title="Cambios en predios",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="Estrategia_predominante",
-#         value_col="Personas",
-#         left=x,
-#         top=y+h+Inches(0.1),
-#         width=w,
-#         height=Inches(2.8),
-#         title="Estrategia",
-#         body_size=17,
-#         title_size=22,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-
-#     add_tarjeta_bullets(
-#         slide_s2h1,
-#         df=df_oref[df_oref['ACTUALIZADO'] == 'Si'],
-#         category_col="escala",
-#         value_col="Personas",
-#         left=Inches(4.5),
-#         top=y+h+Inches(0.1),
-#         width=Inches(8.5),
-#         height=Inches(2.8),
-#         title="Avance acumulado por día",
-#         body_size=tamaño_texto_cuerpo_tarjetas,
-#         title_size=22,
-#         show_text=False,
-#         header_fill=COLOR_LAMINA,
-#         category_color=COLOR_TEXTO,
-#         value_color=COLOR_VALOR,
-#     )
-
-#     plazo = "dia"
-#     avance_periodo = grafica_cumsum(df_oref,periodo=plazo,text_size=32,titulo=" ",n=6)
-
-#     img_bytes = avance_periodo.to_image(
-#         format="png",
-#         width=1100,
-#         height=480,
-#         scale=1
-#     )
-
-#     img_stream = io.BytesIO(img_bytes)
-
-#     # Insertar en PowerPoint
-#     slide_s2h1.shapes.add_picture(
-#         img_stream,
-#         left=Inches(4.6),
-#         top=y+h+Inches(0.5),
-#         width=Inches(8.2),
-#         height=Inches(2.5),
-#     )
-
-# #########################################################################################################
-# # Cierre
-# slide_fin = prs.slides.add_slide(prs.slide_layouts[15])
-# slide_fin.shapes.title.text = "Gracias"
-
-# #########################################################################################################
-
-# # Guardar archivo
-# prs.save(f"{fecha} Reporte Actualización.pptx")
-
-# print("Dashboard creado correctamente.")
-
-
-
-
-# def presentación_asignada_oref(oref,where,parametros):
-    #########################################################################################################
-    # Contenido por OREF
-
-# username = "eva.orozco"
-# oref_asignada = st.secrets["auth"]["credentials"]["usernames"][username].get("oref") if username in st.secrets['auth']['credentials']['usernames'] else []
-
-
-# where = "WHERE " + " AND ".join([oref_asignada])
-
-# title_size=22,
-# body_size=18,
-
-# title_size=tamaño_texto_titulo_tarjetas,
-# body_size=tamaño_texto_cuerpo_tarjetas,
-
 tamaño_texto_titulo_tarjetas = 20
 tamaño_texto_cuerpo_tarjetas = 17
+
+@st.cache_data(ttl=60*30)
+def descargar_presentacion_nacional():
+    prs = Presentation("plantilla.pptx")
+    # #########################################################################################################
+    # Titulo de la presentación
+    slide_titulo = prs.slides.add_slide(prs.slide_layouts[1])
+    # Usa el placeholder de título existente
+    slide_titulo.shapes.title.text = "Producción para el Bienestar"
+    slide_titulo.placeholders[1].text = "Proceso de actualización - 2026"
+
+    shape_procesos = slide_titulo.shapes.add_textbox(left=Inches(0.25),top=Inches(6.5),width=Inches(5),height=Inches(0.5))
+    add_styled_line(shape_procesos.text_frame, [("Reporte con información\n",RGB_BLANCO,True),(f"al {fecha_datos}",RGB_BLANCO,True)], font_size=22)
+
+    # # # #########################################################################################################
+    # # # # Separador de seccion
+    slide_S1h1 = prs.slides.add_slide(prs.slide_layouts[11])
+    slide_S1h1.shapes.title.text = "Avance Nacional"
+
+    datos_nacional_qry = """
+    SELECT
+        SUM("Personas") AS "Meta",
+        SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance",
+        ROUND(
+            (100.0 * COALESCE(
+                SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0
+            )
+            / NULLIF(SUM("Personas"), 0)
+            )::numeric,
+            2
+        ) AS "Pct"
+    FROM concentrado;
+    """
+    # Filtrar datos de la OREF actual
+    meta, actualizados,  pct_avance = cargar_datos(datos_nacional_qry).iloc[0]
+    pendientes = meta - actualizados
+
+    x, y, w, h = Inches(1), Inches(1.1), Inches(3.3), Inches(1.3)
+    sep = Inches(4)
+    add_kpi(
+        slide_S1h1,
+        x, y, w, h,
+        "Meta de Personas",
+        f"{meta:,.0f}",
+        "100%",
+    )
+    add_kpi(
+
+        slide_S1h1,
+        x+sep, y, w, h,
+        "Personas actualizadas",
+        f"{actualizados:,.0f}",
+        f"{pct_avance:.1f}%",
+    )
+
+    add_kpi(
+        slide_S1h1,
+        x+2*sep, y, w, h,
+        "Personas pendientes",
+        f"{pendientes:,.0f}",
+        f"{100 - pct_avance:.1f}%",
+    )
+
+
+    datos_nacional_ore_qry = f"""
+    SELECT
+        "NOM_REP", "ACTUALIZADO",
+        SUM("Personas") AS "Personas"
+    FROM concentrado
+    GROUP BY "NOM_REP", "ACTUALIZADO";
+    """
+    # Filtrar datos de la OREF actual
+    barra_estado = crear_barras_porcentaje(cargar_datos(datos_nacional_ore_qry),"NOM_REP", "ACTUALIZADO", "Personas","", orden_ascendente=True, invertir_apilado=True,font_size = 22, height=480)
+
+    # Convertir Plotly → PNG en memoria
+    img_bytes = barra_estado.to_image(
+        format="png",
+        width=1880,
+        height=800,
+        scale=1
+    )
+
+    img_stream = io.BytesIO(img_bytes)
+
+    # Insertar en PowerPoint
+    slide_S1h1.shapes.add_picture(
+        img_stream,
+        left=Inches(0.15),
+        top=Inches(1.9),
+        width=Inches(13)
+    )
+
+    # #########################################################################################################
+    # Separador de seccion
+    slide_S1h2 = prs.slides.add_slide(prs.slide_layouts[11])
+    slide_S1h2.shapes.title.text = "Avance Nacional - OREF"
+
+    avance_nacional_oref =f"""
+    SELECT
+        "NOM_REP" AS "Nombre OREF",
+        SUM("Personas") AS "Meta",
+        SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance",
+        ROUND(
+            (100.0 * COALESCE(
+                SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0
+            )
+            / NULLIF(SUM("Personas"), 0)
+            )::numeric,
+            2
+        ) AS "Porcentaje"
+    FROM concentrado
+    GROUP BY "Nombre OREF"
+    ORDER BY "Porcentaje" DESC;
+    """
+    resultado = cargar_datos(avance_nacional_oref)
+    n = len(resultado)
+    n_t1 = (n + 1) // 2   # primera mitad (redondea hacia arriba)
+    n_t2 = n // 2  
+
+    top_head=Inches(1.3)
+    row_head_h=Inches(0.65)
+    top_body=top_head+row_head_h
+
+
+    add_table_body(
+        slide_S1h2,
+        resultado.head(n_t1),
+        left=Inches(0.5),
+        top=top_body,
+        width=Inches(6),
+        height=Inches(5),
+        font_size=12,
+        column_widths=[30,20,20,20],
+        column_alignments=["left","right","right","right"],
+        row_height=0.55,
+    )
+
+    add_header_row(
+        slide=slide_S1h2,
+        left=Inches(0.5),
+        top=top_head,
+        width=Inches(6),
+        text=["OREF","Meta\n(Personas)","Avance\n(Personas)","Avance\n(%)"],
+        header_colors=["#10312B","#691C32","#235B4E","#235B4E"],
+        column_widths=[30,20,20,20],
+        column_alignments=["center","center","center","center"],
+        row_height=0.65,
+        font_size=14,
+        font_color=(255,255,255)
+    )
+
+    add_table_body(
+        slide_S1h2,
+        resultado.tail(n_t2),
+        left=Inches(7),
+        top=top_body,
+        height=Inches(5),
+        width=Inches(6),
+        font_size=12,
+        column_widths=[30,20,20,20],
+        column_alignments=["left","right","right","right"],
+        row_height=0.55,
+    )
+
+    add_header_row(
+        slide=slide_S1h2,
+        left=Inches(7),
+        top=top_head,
+        width=Inches(6),
+        text=["OREF","Meta\n(Personas)","Avance\n(Personas)","Avance\n(%)"],
+        header_colors=["#10312B","#691C32","#235B4E","#235B4E"],
+        column_widths=[30,20,20,20],
+        column_alignments=["center","center","center","center"],
+        row_height=0.65,
+        font_size=14,
+        font_color=(255,255,255)
+    )
+
+
+    #########################################################################################################
+    slide_s2h1 = prs.slides.add_slide(prs.slide_layouts[11])
+    slide_s2h1.shapes.title.text = (
+        f"Avance Nacional - Indicadores\n"
+        f"Meta: {meta:,.0f}, avance: {actualizados:,.0f} personas ({pct_avance:.1f}%)"
+    )
+    # slide_s2h1.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)
+    # slide_s2h1.shapes.title.text_frame.paragraphs[0].font.size = Pt(22)
+    slide_s2h1.shapes.title.text_frame.paragraphs[1].font.color.rgb = RGB_VERDE_CLARO
+    slide_s2h1.shapes.title.text_frame.paragraphs[1].font.size = Pt(20)
+
+    # if oref % 3 == 1:
+    #     COLOR_LAMINA = RGB_VERDE
+    #     COLOR_VALOR = RGB_ROJO
+    #     COLOR_TEXTO = RGB_DORADO
+    # elif oref % 3 == 2:
+    #     COLOR_LAMINA = RGB_ROJO
+    #     COLOR_VALOR = RGB_VERDE
+    #     COLOR_TEXTO = RGB_DORADO
+    # else:
+    #     COLOR_LAMINA = RGB_DORADO
+    #     COLOR_VALOR = RGB_ROJO
+    #     COLOR_TEXTO = RGB_VERDE_CLARO
+    COLOR_LAMINA = RGB_VERDE
+    COLOR_VALOR = RGB_ROJO
+    COLOR_TEXTO = RGB_VERDE_CLARO
+
+
+    # dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado ;""").iloc[0,0]
+    shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
+    ddr, cader, mun = cargar_datos(f"""SELECT 
+        COUNT(DISTINCT "NOM_DDR_PROD") FILTER (WHERE "NOM_DDR_PROD" IS NOT NULL AND TRIM("NOM_DDR_PROD") != '') AS N_DDR,
+        COUNT(DISTINCT "NOM_CAD_PROD") FILTER (WHERE "NOM_CAD_PROD" IS NOT NULL AND TRIM("NOM_CAD_PROD") != '') AS N_CAD,
+        COUNT(DISTINCT "NOM_MUN_PROD") FILTER (WHERE "NOM_MUN_PROD" IS NOT NULL AND TRIM("NOM_MUN_PROD") != '') AS N_MUN
+        FROM "geo_loc" ;""").iloc[0]
+    add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos} (General)\n",COLOR_TEXTO,True),
+                                                # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
+                                                (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=12)
+    # agregar_forma(
+    #     slide_s2h1,
+    #     shape_type=MSO_SHAPE.ROUNDED_RECTANGLE,
+    #     left=Inches(0.1),
+    #     top=Inches(0.1),
+    #     width=Inches(8.45),
+    #     height=Inches(1.3),
+    #     fill_color=COLOR_LAMINA,
+    #     border_color=RGB_DORADO,
+    #     border_width=0.5,
+    #     curvature=0.2,
+    #     rotation=0,
+    # )
+
+    # Imagen de la OREF
+    # slide_s2h1.shapes.add_picture(
+    #     f"estados/{int(oref):02d}.png",
+    #     Inches(7),
+    #     Inches(0.1),
+    #     width=Inches(1.3),
+    # )
+
+    sep_top = Inches(1.4)
+    sep_x = Inches(4.4)
+    x, y, w, h = Inches(0.1), Inches(0.1)+sep_top, Inches(4.1), Inches(1.3)
+
+    categoria = "genero"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x,
+        top=y,
+        width=w,
+        height=h,
+        title="Género",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "escala"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x,
+        top=y,
+        width=w,
+        height=h,
+        title="Escala",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    # categoria = "Estatus_coordenadas"
+    categoria = "Pueblo_originario"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x*2,
+        top=y,
+        width=w,
+        height=h,
+        title="Pueblo Originario",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+    x, y, w, h = Inches(0.1), Inches(0.2)+sep_top+h, Inches(4.1), Inches(1.6)
+
+    categoria = "ciclo"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x,
+        top=y,
+        width=w,
+        height=h,
+        title="Ciclo",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "regimen_predominante"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x,
+        top=y,
+        width=w,
+        height=h,
+        title="Régimen hídrico",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "Cambio_cultivo"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x*2,
+        top=y,
+        width=w,
+        height=h,
+        title="Cambio de cultivo",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "Estrategia_predominante"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x,
+        top=y+h+Inches(0.1),
+        width=w,
+        height=Inches(2.8),
+        title="Estrategia",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "Cambio_sup"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x,
+        top=y+h+Inches(0.1),
+        width=w,
+        height=h,
+        title="Cambios en superficie",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+
+    categoria = "Cambio_predios"
+    df_categoria = cargar_datos(f"""SELECT "{categoria}", sum("Personas") AS "Personas" FROM concentrado WHERE "ACTUALIZADO"='Si' GROUP BY "{categoria}";""")
+    add_tarjeta_bullets(
+        slide_s2h1,
+        df=df_categoria,
+        category_col=categoria,
+        value_col="Personas",
+        left=x+sep_x*2,
+        top=y+h+Inches(0.1),
+        width=w,
+        height=h,
+        title="Cambios en predios",
+        body_size=tamaño_texto_cuerpo_tarjetas,
+        title_size=tamaño_texto_titulo_tarjetas,
+        header_fill=COLOR_LAMINA,
+        category_color=COLOR_TEXTO,
+        value_color=COLOR_VALOR,
+    )
+    # Cierre
+    slide_fin = prs.slides.add_slide(prs.slide_layouts[15])
+    slide_fin.shapes.title.text = "Gracias"
+    #########################################################################################################
+    # # Guardar archivo
+    archivo_pptx = io.BytesIO()
+    prs.save(archivo_pptx)
+    archivo_pptx.seek(0)
+    return archivo_pptx.getvalue()
 
 @st.cache_data(ttl=60*30)
 def descargar_presentacion(oref_asignada= [], proceso = None):
@@ -2386,7 +2172,13 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
 
         dias_operación = cargar_datos(f"""SELECT COUNT(DISTINCT "dia") FROM concentrado {where};""",parametros).iloc[0,0]
         shape_dias_corte = slide_s2h1.shapes.add_textbox(left=Inches(8.8),top=Inches(0.55),width=Inches(4),height=Inches(0.8))
-        ddr, cader, mun = cargar_datos(f"""SELECT "N_DDR", "N_CADER", "N_MUN" FROM conteos {where};""",parametros).iloc[0]
+        # ddr, cader, mun = cargar_datos(f"""SELECT "N_DDR", "N_CADER", "N_MUN" FROM conteos {where};""",parametros).iloc[0]
+        ddr, cader, mun = cargar_datos(f"""SELECT 
+            COUNT(DISTINCT "NOM_DDR_PROD") FILTER (WHERE "NOM_DDR_PROD" IS NOT NULL AND TRIM("NOM_DDR_PROD") != '') AS N_DDR,
+            COUNT(DISTINCT "NOM_CAD_PROD") FILTER (WHERE "NOM_CAD_PROD" IS NOT NULL AND TRIM("NOM_CAD_PROD") != '') AS N_CAD,
+            COUNT(DISTINCT "NOM_MUN_PROD") FILTER (WHERE "NOM_MUN_PROD" IS NOT NULL AND TRIM("NOM_MUN_PROD") != '') AS N_MUN
+            FROM "geo_loc" {where};""",parametros).iloc[0]
+
         add_styled_line(shape_dias_corte.text_frame, [(f"Información al {fecha_datos} ({proceso.title()})\n",COLOR_TEXTO,True),
                                                     # (f"{dias_operación} días de operación ({proceso})\n",COLOR_TEXTO,True),
                                                     (f"{ddr:,d} DDR, {cader:,d} CADER y {mun:,d} Municipios",COLOR_TEXTO,True)], font_size=12)
@@ -2707,4 +2499,3 @@ def descargar_presentacion(oref_asignada= [], proceso = None):
     archivo_pptx.seek(0)
     return archivo_pptx.getvalue()
 
-# descargar_presentacion([1,6,7])

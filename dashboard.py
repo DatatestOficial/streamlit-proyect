@@ -1,4 +1,4 @@
-from generar_presentacion import descargar_presentacion
+from generar_presentacion import descargar_presentacion, descargar_presentacion_nacional
 import streamlit as st
 import psycopg 
 import plotly.express as px
@@ -1517,7 +1517,25 @@ with st.sidebar:
             st.download_button(
                 "Descargar",
                 data=st.session_state["presentacion"],
-                file_name=f"{hoy} Reporte Actualización.pptx",
+                file_name=f"Reporte Actualización {hoy}.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            )
+
+    if tipo == 'administrador':
+        version = (oref_pptx, fecha_datos)
+        if st.button("Generar Ficha Nacional"):
+            with st.spinner("Generando presentación..."):
+                st.session_state["presentacion_nacional"] = descargar_presentacion_nacional()
+                st.session_state["version"] = version
+                st.rerun()
+        if (
+            st.session_state.get("presentacion_nacional") is not None
+            and st.session_state.get("version") == version
+        ):
+            st.download_button(
+                "Descargar",
+                data=st.session_state["presentacion_nacional"],
+                file_name=f"Reporte Nacional Actualización {hoy}.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
 
