@@ -1005,11 +1005,11 @@ def crear_barras_porcentaje(
     for x_val, total_personas in dict_totales_x.items():
         fig.add_annotation(
             x=x_val,
-            y=110,  # Se posiciona justo arriba del 100% de la barra apilada
+            y=101,  # Se posiciona justo arriba del 100% de la barra apilada
             # Formatea el número con separador de miles: ej: "Total: 1,234"
             text=f"{total_personas:,.0f}",
             showarrow=False,
-            textangle=-90,  # Rotación a 90 grados (vertical de abajo hacia arriba)
+            textangle=-270,  # Rotación a 90 grados (vertical de abajo hacia arriba)
             xanchor="center",
             yanchor="bottom",  # Se ancla desde la base del texto hacia arriba
             font=dict(
@@ -1768,7 +1768,7 @@ def descargar_presentacion_nacional():
     img_bytes = barra_estado.to_image(
         format="png",
         width=1800,
-        height=700,
+        height=682,
         scale=1.0
     )
 
@@ -1798,9 +1798,13 @@ def descargar_presentacion_nacional():
     ORDER BY "Porcentaje" DESC;
     """
     resultado = cargar_datos(avance_nacional_oref)
+    # El operador ** desempaqueta la suma en el diccionario
+    totales = pd.DataFrame([{resultado.columns[0]: 'Total',**resultado.sum(numeric_only=True)}])
+    resultado = pd.concat([resultado, totales], ignore_index=True)
     n = len(resultado)
     n_t1 = (n + 1) // 2   # primera mitad (redondea hacia arriba)
-    n_t2 = n // 2  
+    n_t2 = n // 2
+
 
     top_head=Inches(1.3)
     row_head_h=Inches(0.65)
