@@ -1693,13 +1693,13 @@ def agregar_forma(
 
 hoy = datetime.now(ZoneInfo("America/Mexico_City"))
 fecha = (format_date(hoy, format="d 'de' MMMM 'de' yyyy", locale="es"))
-fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
 
 tamaño_texto_titulo_tarjetas = 20
 tamaño_texto_cuerpo_tarjetas = 17
 
 @st.cache_data(ttl=60*15)
 def descargar_presentacion_nacional():
+    fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
     prs = Presentation("plantilla.pptx")
     # #########################################################################################################
     # Titulo de la presentación
@@ -2114,6 +2114,7 @@ def descargar_presentacion_nacional():
 
 @st.cache_data(ttl=60*15)
 def descargar_presentacion(oref_asignada= [], proceso = None):
+    fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""").iloc[0,0], format="d 'de' MMMM 'de' yyyy", locale="es")
     prs = Presentation("plantilla.pptx")
     condiciones = ['"CVE_REP_PROD" = ANY(%s)']
     parametros_general=[oref_asignada]

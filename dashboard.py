@@ -1491,7 +1491,7 @@ with st.sidebar:
         oref_pptx = oref_asignada
 
     if oref_pptx:
-        version = (oref_pptx, fecha_datos)
+        version = (oref_pptx, fecha_datos, proceso)
         if st.button("Generar Ficha por OREF"):
             with st.spinner("Generando presentación..."):
                 st.session_state["presentacion"] = descargar_presentacion(oref_pptx,proceso)
