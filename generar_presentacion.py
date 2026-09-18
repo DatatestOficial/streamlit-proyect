@@ -60,7 +60,6 @@ def cargar_datos(query, parametros=None):
             columnas = [desc.name for desc in cur.description]
     return pd.DataFrame(filas, columns=columnas).reset_index(drop=True)
 
-
 def add_header_row(
     slide,
     left,
@@ -884,7 +883,8 @@ def crear_barras_porcentaje(
     # PORCENTAJES
     # ----------------------------
     totales = df_agrupado.groupby(col_x)[col_valores].transform("sum")
-    df_agrupado["Porcentaje"] = (df_agrupado[col_valores] / totales * 100).round(1)
+    df_agrupado["Porcentaje"] = (df_agrupado[col_valores] / totales * 100).round(2)
+    dict_totales_x = (df_agrupado.groupby(col_x)[col_valores].sum().to_dict())
     # ----------------------------
     # ORDEN CORRECTO (CLAVE)
     # ordenado por TOTAL REAL del valor (ej: Actualizados)
@@ -965,7 +965,7 @@ def crear_barras_porcentaje(
         ),
         yaxis=dict(
             title=dict(
-                text="Porcentaje (%)",
+                text="",
                 font=dict(
                 size=font_size,          # Tamaño del título
                 family=FONT_FAMILY,
@@ -983,7 +983,7 @@ def crear_barras_porcentaje(
             ),
             # y=1.02, 
             orientation="h",
-            y=-0.4,
+            y=-0.28,
             x=0.5,
             # yanchor="bottom",
             xanchor="center",
@@ -997,10 +997,27 @@ def crear_barras_porcentaje(
         height=height,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=40, r=20, t=80, b=120),
-        # uniformtext_minsize=14,
+        margin=dict(l=70, r=10, t=80, b=30),
+        # uniformtext_minsize=font_size,
         # uniformtext_mode="hide",
     )
+
+    for x_val, total_personas in dict_totales_x.items():
+        fig.add_annotation(
+            x=x_val,
+            y=110,  # Se posiciona justo arriba del 100% de la barra apilada
+            # Formatea el número con separador de miles: ej: "Total: 1,234"
+            text=f"{total_personas:,.0f}",
+            showarrow=False,
+            textangle=-90,  # Rotación a 90 grados (vertical de abajo hacia arriba)
+            xanchor="center",
+            yanchor="bottom",  # Se ancla desde la base del texto hacia arriba
+            font=dict(
+                size=font_size - 4,  # Ligeramente más pequeño para que quepa bien
+                color="black",
+                family=FONT_FAMILY,
+            ),
+        )
 
     return fig
 
@@ -1681,7 +1698,7 @@ fecha_datos = format_date(cargar_datos(f"""SELECT MAX("dia") FROM concentrado;""
 tamaño_texto_titulo_tarjetas = 20
 tamaño_texto_cuerpo_tarjetas = 17
 
-@st.cache_data(ttl=60*30)
+@st.cache_data(ttl=60*15)
 def descargar_presentacion_nacional():
     prs = Presentation("plantilla.pptx")
     # #########################################################################################################
@@ -1701,16 +1718,9 @@ def descargar_presentacion_nacional():
 
     datos_nacional_qry = """
     SELECT
-        SUM("Personas") AS "Meta",
-        SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance",
-        ROUND(
-            (100.0 * COALESCE(
-                SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0
-            )
-            / NULLIF(SUM("Personas"), 0)
-            )::numeric,
-            2
-        ) AS "Pct"
+        SUM("Personas") AS "Meta (personas)",
+        SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance (personas)",
+        ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0) / NULLIF(SUM("Personas"), 0))::numeric,2) AS "Porcentaje"
     FROM concentrado;
     """
     # Filtrar datos de la OREF actual
@@ -1752,14 +1762,14 @@ def descargar_presentacion_nacional():
     GROUP BY "NOM_REP", "ACTUALIZADO";
     """
     # Filtrar datos de la OREF actual
-    barra_estado = crear_barras_porcentaje(cargar_datos(datos_nacional_ore_qry),"NOM_REP", "ACTUALIZADO", "Personas","", orden_ascendente=True, invertir_apilado=True,font_size = 22, height=480)
+    barra_estado = crear_barras_porcentaje(cargar_datos(datos_nacional_ore_qry),"NOM_REP", "ACTUALIZADO", "Personas","", orden_ascendente=True, invertir_apilado=True,font_size = 22, height=500)
 
     # Convertir Plotly → PNG en memoria
     img_bytes = barra_estado.to_image(
         format="png",
-        width=1880,
-        height=800,
-        scale=1
+        width=1800,
+        height=700,
+        scale=1.0
     )
 
     img_stream = io.BytesIO(img_bytes)
@@ -1768,7 +1778,7 @@ def descargar_presentacion_nacional():
     slide_S1h1.shapes.add_picture(
         img_stream,
         left=Inches(0.15),
-        top=Inches(1.9),
+        top=Inches(2.4),
         width=Inches(13)
     )
 
@@ -1782,14 +1792,7 @@ def descargar_presentacion_nacional():
         "NOM_REP" AS "Nombre OREF",
         SUM("Personas") AS "Meta",
         SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance",
-        ROUND(
-            (100.0 * COALESCE(
-                SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0
-            )
-            / NULLIF(SUM("Personas"), 0)
-            )::numeric,
-            2
-        ) AS "Porcentaje"
+        ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0)/ NULLIF(SUM("Personas"), 0))::numeric,2) AS "Porcentaje"
     FROM concentrado
     GROUP BY "Nombre OREF"
     ORDER BY "Porcentaje" DESC;
@@ -2105,7 +2108,7 @@ def descargar_presentacion_nacional():
     archivo_pptx.seek(0)
     return archivo_pptx.getvalue()
 
-@st.cache_data(ttl=60*30)
+@st.cache_data(ttl=60*15)
 def descargar_presentacion(oref_asignada= [], proceso = None):
     prs = Presentation("plantilla.pptx")
     condiciones = ['"CVE_REP_PROD" = ANY(%s)']

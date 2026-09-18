@@ -966,6 +966,7 @@ def enviar_ingreso(username=None):
         conn.commit()
 
 fecha_datos =format_date(cargar_datos("""SELECT MAX("dia") FROM concentrado""").iloc[0, 0], format="d 'de' MMMM 'de' yyyy", locale="es")
+st.session_state['fecha_datos'] = fecha_datos
 
 st.markdown(f"""
     <div style="line-height: 1;">
@@ -1001,13 +1002,6 @@ with st.sidebar:
     st.header("Filtros de información")
     proceso = st.selectbox("Seleccionar proceso", ["GENERAL","FASE 1", "FASE 2"], index=0)
 
-# print(proceso)
-# if proceso == "8 OREF":
-#     condiciones.append('"OCHO_ENT" = ANY(%s)')
-#     parametros.append(["Si"])
-# elif proceso == "25 OREF":
-#     condiciones.append('"OCHO_ENT" = ANY(%s)')
-#     parametros.append(["No"])
 if proceso == "FASE 1":
     condiciones.append('"FASES" = ANY(%s)')
     parametros.append(["FASE 1"])
@@ -1114,9 +1108,8 @@ tab_avance, tab_productivos, tab_perfil, tab_graficos, tab_Consultador = st.tabs
 
 with tab_avance:
 
-    tab_avance_estados, tab_avance_cader, tab_temporal = st.tabs([
+    tab_avance_estados, tab_temporal = st.tabs([
         "Por OREF",
-        "Por CADER",
         "Por Periodo",
     ])
 
@@ -1133,78 +1126,73 @@ with tab_avance:
                 st.plotly_chart(crear_barras_porcentaje(df_estado, "NOM_REP", "ACTUALIZADO", "Personas", "Avance por OREF"), width='stretch')
         
         with tab_detalle_avance_est:
-            config_df_oref = {
-                "NOM_REP": st.column_config.Column("OREF", width=150),
-                "Personas": st.column_config.NumberColumn("Meta", format="accounting", step=1),
-                "Personas_act": st.column_config.NumberColumn("Avance", format="accounting", step=1),
-                "pct_act": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01),
-                "Personas_meta_caña": st.column_config.NumberColumn("Meta CONADESUCA", format="accounting", step=1),
-                "Personas_act_caña": st.column_config.NumberColumn("Avance CONADESUCA", format="accounting", step=1),
-                "pct_caña": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01),
-                "Personas_meta_tarjetas": st.column_config.NumberColumn("Meta R. Tarjetas", format="accounting", step=1),
-                "Personas_act_tarjetas": st.column_config.NumberColumn("Avance R. Tarjetas", format="accounting", step=1),
-                "pct_tarjetas": st.column_config.NumberColumn("(%)", format="%.1f%%", step=0.01)
+            columnas_nombres = { 
+                "CVE_REP_PROD": "Clave OREF",
+                "NOM_REP": "OREF",
+                "NOM_DDR_PROD": "DDR",
+                "NOM_CAD_PROD": "CADER",
+                "NOM_MUN_PROD": "Municipio",
+            } 
+            st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF-DDR-CADER-Municipio</span>", unsafe_allow_html=True)
+            columnas_elegidas = st.multiselect(
+                "Opciones:", 
+                options=columnas_nombres.values(), 
+                max_selections=3,
+                width=400,
+                placeholder="Selecciona hasta 3",
+                default="OREF"
+            )
+
+            if columnas_elegidas:
+                columnas_seleccionadas = [clave for clave, valor in columnas_nombres.items() if valor in columnas_elegidas]
+                columnas = ", ".join([f'"{c}"' for c in columnas_seleccionadas])
+                query_consulta = f"""
+                SELECT
+                    CASE WHEN "OCHO_ENT" = 'Si' THEN '8 OREF' ELSE '25 OREF' END AS "Etiqueta",
+                    {columnas},
+                    SUM("Personas") AS "Meta (personas)",
+                    SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance (personas)",
+                    ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0) / NULLIF(SUM("Personas"), 0))::numeric,2) AS "Porcentaje"
+                FROM geo_loc
+                {where_oref}
+                GROUP BY "Etiqueta", {columnas}
+                ORDER BY "Porcentaje"
+                """
+                columnas_total = ", ".join([f""" 'Total' AS "{c}" """ for c in columnas_seleccionadas])
+                query_total = f"""
+                SELECT
+                    'Total' AS "Etiqueta",
+                    {columnas_total},
+                    SUM("Personas") AS "Meta (personas)",
+                    SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si') AS "Avance (personas)",
+                    ROUND((100.0 * COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si'),0) / NULLIF(SUM("Personas"), 0))::numeric,2) AS "Porcentaje"
+                FROM geo_loc
+                {where_oref}
+                """
+            else:
+                query_consulta = f"""
+                SELECT DISTINCT 'Seleccione una variable' AS "Resultado"
+                FROM geo_loc
+                {where_oref};"""
+                query_total = f"""
+                SELECT DISTINCT 'Seleccione una variable' AS "Totales"
+                FROM geo_loc
+                {where_oref};"""
+
+            df_consultador_config ={
+                "CVE_REP_PROD": st.column_config.Column("CLAVE OREF"),
+                "NOM_REP": st.column_config.Column("OREF",width=150),
+                "NOM_DDR_PROD": st.column_config.Column("DDR",width=150),
+                "NOM_CAD_PROD": st.column_config.Column("CADER",width=150),
+                "NOM_MUN_PROD": st.column_config.Column("Municipio",width=150),
+                "Meta (personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Avance (personas)": st.column_config.NumberColumn(format="accounting", step=1),
+                "Porcentaje": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
             }
-            cols = ["Etiqueta","NOM_REP","Personas","Personas_act","pct_act","Personas_meta_caña","Personas_act_caña","pct_caña","Personas_meta_tarjetas","Personas_act_tarjetas","pct_tarjetas"]
-
-            
-            df_oref=(cargar_datos(f"""SELECT "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta", sum("Personas") AS "Personas" FROM geo_loc {where_oref} GROUP BY "NOM_REP","OCHO_ENT", "ACTUALIZADO","CONADESUCA","reposición_tarjeta";""",parametros_oref).assign(
-                Etiqueta = lambda x: np.where(x["OCHO_ENT"].eq("Si"),"8 OREF","25 OREF"),
-                Personas_act=lambda x:x["Personas"].where(x["ACTUALIZADO"].eq("Si"),0),
-                Personas_meta_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si"),0),
-                Personas_act_caña=lambda x:x["Personas"].where(x["CONADESUCA"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0),
-                Personas_meta_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si"),0),
-                Personas_act_tarjetas=lambda x:x["Personas"].where(x["reposición_tarjeta"].eq("Si")&x["ACTUALIZADO"].eq("Si"),0))
-                .groupby(["Etiqueta","NOM_REP"],dropna=False,as_index=False)[["Personas","Personas_act","Personas_meta_caña","Personas_act_caña","Personas_meta_tarjetas","Personas_act_tarjetas"]].sum()
-                .assign(
-                    pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0).astype('float64'),
-                    pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0).astype('float64'),
-                    pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0).astype('float64')
-                ).sort_values("pct_act",ascending=False)
-                )[cols]
-            
-            df_oref_totales=df_oref.sum(numeric_only=True).to_frame().T.assign(
-                NOM_REP="TOTAL",Etiqueta=" ",
-                pct_act=lambda x:(x["Personas_act"]/x["Personas"]*100).fillna(0).astype('float64'),
-                pct_caña=lambda x:(x["Personas_act_caña"]/x["Personas_meta_caña"]*100).fillna(0).astype('float64'),
-                pct_tarjetas=lambda x:(x["Personas_act_tarjetas"]/x["Personas_meta_tarjetas"]*100).fillna(0).astype('float64')
-            )[cols]
-
-            st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF</span>", unsafe_allow_html=True)
-            st.dataframe(df_oref,width="stretch",column_config=config_df_oref, hide_index=True)
-            st.dataframe(df_oref_totales,width="stretch",column_config=config_df_oref, hide_index=True)
-
-
-    with tab_avance_cader:
-        config_df_cader = {
-            "OREF": st.column_config.Column(width=150),
-            "DDR": st.column_config.Column(width=150),
-            "CADER": st.column_config.Column(width=150),
-            "Meta\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
-            "Avance\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
-            "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
-        }
-        config_df_cader_totales = {
-            "OREF": st.column_config.Column(width=600),
-            "Meta\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
-            "Avance\n(personas)": st.column_config.NumberColumn(format="accounting", step=1),
-            "Avance\n(%)": st.column_config.NumberColumn(format="%.1f%%", step=0.01),
-        }
-        df_cader = (cargar_datos(f"""SELECT "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO", sum("Personas") AS "Personas" FROM geo_loc {where_oref} GROUP BY "NOM_REP","NOM_DDR_PROD","NOM_CAD_PROD","OCHO_ENT", "ACTUALIZADO";""",parametros_oref)
-                    .assign(avance=lambda x: x["Personas"].where(x["ACTUALIZADO"] == "Si", 0))
-                    .groupby(["NOM_REP", "NOM_DDR_PROD", "NOM_CAD_PROD",],dropna=False,as_index=False)[["Personas","avance"]]
-                    .sum().reset_index(drop=True)
-                    .assign(porcentaje=lambda x: (100 * x["avance"] / x["Personas"]).round(2).fillna(0).astype('float64'))
-                    .sort_values(["avance"],ascending=False)
-                    .rename(columns={"NOM_REP": "OREF", "NOM_DDR_PROD": "DDR", "NOM_CAD_PROD": "CADER", "Personas": "Meta\n(personas)","avance": "Avance\n(personas)", "porcentaje": "Avance\n(%)"})
-                    )[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
-
-        df_cader_totales=df_cader.sum(numeric_only=True).to_frame().T.assign(OREF="TOTAL",DDR="TOTAL",CADER="TOTAL",**{"Avance\n(%)": lambda x: (100 * x["Avance\n(personas)"] / x["Meta\n(personas)"]).round(2).fillna(0).astype('float64')})[["OREF","DDR","CADER","Meta\n(personas)","Avance\n(personas)","Avance\n(%)"]]
-
-        st.markdown(f"<span style='color: {GUINDA}; font-size: 28px; font-weight: bold;'>Avance por OREF-DDR-CADER</span>", unsafe_allow_html=True)
-        st.dataframe(df_cader, column_config=config_df_cader, width='stretch', hide_index=True)
-        st.dataframe(df_cader_totales, column_config=config_df_cader, width='stretch', hide_index=True)
-
+            df_consultador = cargar_datos(query_consulta,parametros_oref)
+            df_consultador_totales = cargar_datos(query_total,parametros_oref)
+            st.dataframe(df_consultador,column_config=df_consultador_config,hide_index=True)
+            st.dataframe(df_consultador_totales,column_config=df_consultador_config,hide_index=True)
 
     with tab_temporal:
         periodo = st.segmented_control("Periodo:", options=["Diario","Semanal", "Mensual"], default="Diario")
@@ -1265,7 +1253,7 @@ with tab_productivos:
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'OI'), 0) AS "Otoño-Invierno",
         COALESCE(SUM("Personas") FILTER (WHERE "ciclo" = 'PV'), 0) AS "Primavera-Verano",
         SUM("Personas") AS "Total"
-    FROM concentrado {where} GROUP BY "Estrategia predominante";
+    FROM concentrado {where} GROUP BY "Estrategia predominante" ORDER BY "Total" DESC;
     """
     df_estrategia_ciclo_rh_tipo = cargar_datos(df_estrategia_ciclo_rh_tipo,parametros)
     # Dar formato de número a todo lo que parezca número
@@ -1517,7 +1505,7 @@ with st.sidebar:
             st.download_button(
                 "Descargar",
                 data=st.session_state["presentacion"],
-                file_name=f"Reporte Actualización {hoy}.pptx",
+                file_name=f"Reporte OREF Actualización {fecha_datos}.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
 
@@ -1535,7 +1523,7 @@ with st.sidebar:
             st.download_button(
                 "Descargar",
                 data=st.session_state["presentacion_nacional"],
-                file_name=f"Reporte Nacional Actualización {hoy}.pptx",
+                file_name=f"Reporte Nacional Actualización {fecha_datos}.pptx",
                 mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
             )
 
