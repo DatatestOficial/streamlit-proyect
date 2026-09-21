@@ -1799,17 +1799,19 @@ def descargar_presentacion_nacional():
     """
     resultado = cargar_datos(avance_nacional_oref)
     # El operador ** desempaqueta la suma en el diccionario
-    totales = pd.DataFrame([{resultado.columns[0]: 'Total',**resultado.sum(numeric_only=True)}])
+    s1, s2 = resultado.iloc[:, 1:3].sum()
+    totales = pd.DataFrame([{
+        resultado.columns[0]: 'Total',resultado.columns[1]: s1,resultado.columns[2]: s2,
+        resultado.columns[3]: f"{pct_avance:.2f}"
+    }])
     resultado = pd.concat([resultado, totales], ignore_index=True)
     n = len(resultado)
     n_t1 = (n + 1) // 2   # primera mitad (redondea hacia arriba)
     n_t2 = n // 2
 
-
     top_head=Inches(1.3)
     row_head_h=Inches(0.65)
     top_body=top_head+row_head_h
-
 
     add_table_body(
         slide_S1h2,
