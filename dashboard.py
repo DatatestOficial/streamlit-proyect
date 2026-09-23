@@ -948,7 +948,7 @@ div[data-testid="stMultiSelect"] label p {
 # CARGA DE DATOS
 # ═══════════════════════════════════════════════════════════════════════════════
 # Funciones
-@st.cache_data(ttl=60*30)
+@st.cache_data(ttl=60*15)
 def cargar_datos(query, parametros=None):
     with psycopg.connect(st.secrets["supabase"]["DATABASE_URL"]) as conn:
         with conn.cursor() as cur:
@@ -1156,7 +1156,7 @@ with tab_avance:
                 FROM geo_loc
                 {where_oref}
                 GROUP BY "Etiqueta", {columnas}
-                ORDER BY "Porcentaje"
+                ORDER BY "Porcentaje" DESC
                 """
                 columnas_total = ", ".join([f""" 'Total' AS "{c}" """ for c in columnas_seleccionadas])
                 query_total = f"""
@@ -1537,6 +1537,5 @@ with st.expander("Información Legal y de Privacidad"):
     Esta plataforma es una herramienta de consulta exclusiva para el personal autorizado del Gobierno. Desarrollada por el Área de Actualización y Estadística, los resultados presentados son de carácter estrictamente informativo y no constituyen documentos oficiales, resoluciones ni actos administrativos vinculantes.<br> <br>
     © Todos los derechos reservados - Área de Actualización y Estadística.<br>
     """, unsafe_allow_html=True)
-
 
     # print(cargar_datos("""SELECT column_name FROM information_schema.columns WHERE table_name = 'concentrado';"""))
