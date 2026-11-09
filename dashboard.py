@@ -1070,7 +1070,7 @@ where = "WHERE " + " AND ".join(condiciones)
 # ═══════════════════════════════════════════════════════════════════════════════
 kpis = cargar_datos(f""" SELECT 
     COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' ), 0) AS "Avance",
-    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' AND "semana" = (SELECT MAX("semana") FROM concentrado) ), 0) AS "act_max_semana"
+    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' AND "dia" >= (SELECT MAX("dia") - INTERVAL '6 days' FROM concentrado)), 0) AS "Suma_ultimos_7_dias"
     FROM concentrado  {where}
 """,parametros).fillna(0).astype('float64').iloc[0]
 meta = cargar_datos(f"""SELECT SUM("Personas") FROM concentrado  {where_oref}""",parametros_oref).fillna(0).astype('float64').iloc[0,0]
