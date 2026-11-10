@@ -1070,7 +1070,7 @@ where = "WHERE " + " AND ".join(condiciones)
 # ═══════════════════════════════════════════════════════════════════════════════
 kpis = cargar_datos(f""" SELECT 
     COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' ), 0) AS "Avance",
-    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' AND "dia" >= (SELECT MAX("dia") - INTERVAL '6 days' FROM concentrado)), 0) AS "Suma_ultimos_7_dias"
+    COALESCE(SUM("Personas") FILTER (WHERE "ACTUALIZADO" = 'Si' AND "semana" = TO_CHAR((DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '1 day')::date, 'YYYY-MM-DD')), 0) AS "act_ultima_semana_completa"
     FROM concentrado  {where}
 """,parametros).fillna(0).astype('float64').iloc[0]
 meta = cargar_datos(f"""SELECT SUM("Personas") FROM concentrado  {where_oref}""",parametros_oref).fillna(0).astype('float64').iloc[0,0]
@@ -1109,8 +1109,8 @@ tab_avance, tab_productivos, tab_perfil, tab_graficos, tab_Consultador = st.tabs
 with tab_avance:
 
     tab_avance_estados, tab_temporal = st.tabs([
-        "Por OREF",
-        "Por Periodo",
+        "OREF-DDR-CADER",
+        "Día-Semana-Mes",
     ])
 
 
